@@ -37,7 +37,7 @@ render_head('Cut-Through Details');
 <section class="card" style="margin-top:1rem;">
   <h2>Matched Cut-Through Events</h2>
   <table>
-    <thead><tr><th>In Time</th><th>In CP</th><th>Out Time</th><th>Out CP</th><th>Distance</th><th>Elapsed</th><th>Expected</th><th>Avg Speed</th><th>Confidence</th><th>Vehicle</th></tr></thead>
+    <thead><tr><th>In Event #</th><th>Out Event #</th><th>In Time</th><th>In CP</th><th>Out Time</th><th>Out CP</th><th>Distance</th><th>Elapsed</th><th>Expected</th><th>Avg Speed</th><th>Confidence</th><th>Vehicle</th></tr></thead>
     <tbody id="matchesBody"></tbody>
   </table>
 </section>
@@ -66,9 +66,11 @@ function csvEscape(v) {
 }
 
 function exportCsv() {
-  const rows = [['in_time','in_checkpoint','out_time','out_checkpoint','distance_miles','elapsed_minutes','expected_minutes','avg_speed_mph','confidence','plate_in','plate_out','vehicle_type','vehicle_color']];
+  const rows = [['in_event_id','out_event_id','in_time','in_checkpoint','out_time','out_checkpoint','distance_miles','elapsed_minutes','expected_minutes','avg_speed_mph','confidence','plate_in','plate_out','vehicle_type','vehicle_color']];
   for (const m of matchesCache) {
     rows.push([
+      m.in_event.id,
+      m.out_event.id,
       m.in_event.event_time,
       m.in_event.checkpoint_name,
       m.out_event.event_time,
@@ -107,7 +109,7 @@ async function loadDetails() {
   for (const m of matchesCache) {
     const vehicle = `${m.in_event.vehicle_type} / ${m.in_event.vehicle_color}`;
     const tr = document.createElement('tr');
-    tr.innerHTML = `<td>${m.in_event.event_time}</td><td>${m.in_event.checkpoint_name}</td>
+    tr.innerHTML = `<td>${m.in_event.id}</td><td>${m.out_event.id}</td><td>${m.in_event.event_time}</td><td>${m.in_event.checkpoint_name}</td>
       <td>${m.out_event.event_time}</td><td>${m.out_event.checkpoint_name}</td><td>${m.distance_miles}</td>
       <td>${m.elapsed_minutes}</td><td>${m.expected_minutes}</td><td>${m.avg_speed_mph} mph</td><td>${m.confidence}</td><td>${vehicle}</td>`;
     matchBody.appendChild(tr);

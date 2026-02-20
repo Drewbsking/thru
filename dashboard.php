@@ -47,7 +47,7 @@ render_head('Dashboard');
   <article class="card">
     <h2>Cut-Through Matches</h2>
     <table>
-      <thead><tr><th>In</th><th>Out</th><th>Elapsed</th><th>Expected</th><th>Avg Speed</th><th>Confidence</th></tr></thead>
+      <thead><tr><th>In Event #</th><th>Out Event #</th><th>In</th><th>Out</th><th>Elapsed</th><th>Expected</th><th>Avg Speed</th><th>Confidence</th></tr></thead>
       <tbody id="matchBody"></tbody>
     </table>
   </article>
@@ -56,7 +56,7 @@ render_head('Dashboard');
 <section class="card" style="margin-top:1rem;">
   <h2>Recent Events</h2>
   <table>
-    <thead><tr><th>Time</th><th>Checkpoint</th><th>Dir</th><th>Plate</th><th>Type</th><th>Color</th><th>Observer</th></tr></thead>
+    <thead><tr><th>Event #</th><th>Time</th><th>Checkpoint</th><th>Dir</th><th>Plate</th><th>Type</th><th>Color</th><th>Observer</th></tr></thead>
     <tbody id="recentBody"></tbody>
   </table>
 </section>
@@ -112,7 +112,9 @@ async function loadDashboard() {
   matchBody.innerHTML = '';
   json.matches.slice(0, 20).forEach(m => {
     const tr = document.createElement('tr');
-    tr.innerHTML = `<td>${m.in_event.checkpoint_name} ${m.in_event.event_time}</td>
+    tr.innerHTML = `<td>${m.in_event.id}</td>
+      <td>${m.out_event.id}</td>
+      <td>${m.in_event.checkpoint_name} ${m.in_event.event_time}</td>
       <td>${m.out_event.checkpoint_name} ${m.out_event.event_time}</td>
       <td>${m.elapsed_minutes} min</td>
       <td>${m.expected_minutes} min</td>
@@ -125,7 +127,7 @@ async function loadDashboard() {
   recentBody.innerHTML = '';
   json.recent_events.forEach(e => {
     const tr = document.createElement('tr');
-    tr.innerHTML = `<td>${e.event_time}</td><td>${e.checkpoint_name}</td><td>${e.direction}</td><td>${e.plate_raw || ''}</td><td>${e.vehicle_type}</td><td>${e.vehicle_color}</td><td>${e.observer_name || ''}</td>`;
+    tr.innerHTML = `<td>${e.id}</td><td>${e.event_time}</td><td>${e.checkpoint_name}</td><td>${e.direction}</td><td>${e.plate_raw || ''}</td><td>${e.vehicle_type}</td><td>${e.vehicle_color}</td><td>${e.observer_name || ''}</td>`;
     recentBody.appendChild(tr);
   });
 

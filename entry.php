@@ -124,12 +124,6 @@ render_head('Data Entry');
           <label class="inline-radio"><input type="radio" name="vehicle_color" value="Green"> <span>Green</span></label>
           <label class="inline-radio"><input type="radio" name="vehicle_color" value="Other"> <span>Other</span></label>
         </div>
-        <div class="form-row" id="otherColorWrap" style="display:none; margin-top:0.5rem;">
-          <div>
-            <label>Other Color</label>
-            <input id="other_color" maxlength="50" placeholder="ENTER COLOR" style="text-transform:uppercase;" autocapitalize="characters" spellcheck="false">
-          </div>
-        </div>
       </div>
 
       <div class="form-row">
@@ -173,8 +167,6 @@ const form = document.getElementById('eventForm');
 const statusEl = document.getElementById('saveStatus');
 const sitePreview = document.getElementById('entrySitePreview');
 const noImageMsg = document.getElementById('entrySiteNoImage');
-const otherColorWrap = document.getElementById('otherColorWrap');
-const otherColorInput = document.getElementById('other_color');
 const collectorDisplay = document.getElementById('collector_name_display');
 const greetingEl = document.getElementById('entryGreeting');
 const mapPanel = document.getElementById('mapPanel');
@@ -250,17 +242,7 @@ function selectedRadioValue(name) {
 }
 
 function selectedVehicleColor() {
-  const value = selectedRadioValue('vehicle_color');
-  if (value !== 'Other') {
-    return value;
-  }
-  return (otherColorInput ? otherColorInput.value.trim() : '');
-}
-
-function toggleOtherColor() {
-  if (!otherColorWrap) return;
-  const selected = selectedRadioValue('vehicle_color');
-  otherColorWrap.style.display = selected === 'Other' ? 'grid' : 'none';
+  return selectedRadioValue('vehicle_color');
 }
 
 function notifySuccess() {
@@ -301,17 +283,14 @@ function clearPendingConfirm() {
 }
 
 document.querySelectorAll('input[name="vehicle_color"]').forEach((input) => {
-  input.addEventListener('change', toggleOtherColor);
   input.addEventListener('change', clearPendingConfirm);
 });
-toggleOtherColor();
 document.querySelectorAll('input[name="vehicle_type"], input[name="direction"]').forEach((input) => {
   input.addEventListener('change', clearPendingConfirm);
 });
 if (plateInput) plateInput.addEventListener('input', clearPendingConfirm);
 if (notesInput) notesInput.addEventListener('input', clearPendingConfirm);
 forceUppercaseInput(plateInput);
-forceUppercaseInput(otherColorInput);
 forceUppercaseInput(notesInput);
 
 function syncCollectorForSelectedCheckpoint() {
@@ -543,7 +522,6 @@ document.addEventListener('keydown', (e) => {
   const colorMap = { '6': 'White', '7': 'Black/Blue', '8': 'Gray/Silver', '9': 'Red', '0': 'Green', '-': 'Other' };
   if (colorMap[key]) {
     document.querySelector(`input[name=\"vehicle_color\"][value=\"${colorMap[key]}\"]`)?.click();
-    toggleOtherColor();
   }
 });
 
@@ -595,10 +573,6 @@ if (form) {
     notifySuccess();
     document.getElementById('plate').value = '';
     document.getElementById('notes').value = '';
-    if (otherColorInput) {
-      otherColorInput.value = '';
-    }
-    toggleOtherColor();
     if (quickModeInput && quickModeInput.checked && plateInput) {
       plateInput.focus();
       plateInput.select();
