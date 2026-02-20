@@ -24,11 +24,6 @@ render_head('Home');
     <article class="card">
       <h2><?= h($site['name']) ?><?= (int)$site['id'] === $activeId ? ' (Active)' : '' ?></h2>
       <p class="small">Site ID <?= (int)$site['id'] ?>. Use checkpoint links below for locked data entry.</p>
-      <?php if (!empty($site['image_path'])): ?>
-        <img class="site-preview" src="<?= h($site['image_path']) ?>" alt="Site image">
-      <?php else: ?>
-        <p class="small">No site image uploaded yet.</p>
-      <?php endif; ?>
       <div class="actions">
         <a class="btn secondary" href="entry.php?site_id=<?= (int)$site['id'] ?>">Open N-CAT Data Entry</a>
       </div>

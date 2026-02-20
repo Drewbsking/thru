@@ -42,26 +42,6 @@ render_head('Data Entry');
   <?php if (!$site): ?>
     <p class="status warn">No active site found. Configure a site first in <a href="setup.php">Site Setup</a>.</p>
   <?php else: ?>
-    <div class="card" style="margin-bottom:0.5rem; padding:0.7rem;">
-      <h2 style="margin-bottom:0.45rem;">Site Map Reminder</h2>
-      <div class="actions" style="margin-top:0.25rem;">
-        <button type="button" id="mapToggleBtn" class="secondary">Hide Map</button>
-      </div>
-      <div id="mapPanel" class="site-map-panel open">
-        <p class="small" style="margin-top:0;">Use this image to confirm checkpoint numbering before saving.</p>
-        <img
-          id="entrySitePreview"
-          class="site-preview"
-          src="<?= !empty($site['image_path']) ? h((string)$site['image_path']) : '' ?>"
-          alt="Site image reminder"
-          style="<?= empty($site['image_path']) ? 'display:none;' : '' ?>"
-        >
-        <p id="entrySiteNoImage" class="small" style="<?= !empty($site['image_path']) ? 'display:none;' : '' ?>">
-          No image uploaded for this site yet. Add one in <a href="setup.php">Site Setup</a>.
-        </p>
-      </div>
-    </div>
-
     <div class="form-row">
       <div>
         <label>Site</label>
@@ -141,11 +121,16 @@ render_head('Data Entry');
     </form>
 
     <div class="card" style="margin-top:0.6rem; padding:0.7rem;">
-      <h3 style="margin-bottom:0.45rem;">Last 5 Entries (This Checkpoint)</h3>
-      <table>
-        <thead><tr><th>Time</th><th>Dir</th><th>Plate</th><th>Type/Color</th><th>Action</th></tr></thead>
-        <tbody id="recentEntryBody"></tbody>
-      </table>
+      <div style="display:flex; align-items:center; justify-content:space-between; gap:0.5rem;">
+        <h3 style="margin-bottom:0;">Last 6 Entries (This Checkpoint)</h3>
+        <button type="button" id="recentEntriesToggle" class="secondary" aria-expanded="false" aria-controls="recentEntriesPanel">Show</button>
+      </div>
+      <div id="recentEntriesPanel" style="display:none; margin-top:0.45rem;">
+        <table>
+          <thead><tr><th>Event #</th><th>Time</th><th>Dir</th><th>Plate</th><th>Type/Color</th><th>Action</th></tr></thead>
+          <tbody id="recentEntryBody"></tbody>
+        </table>
+      </div>
     </div>
   <?php endif; ?>
 </section>
@@ -162,12 +147,8 @@ const siteInput = document.getElementById('site_id');
 const cpInput = document.getElementById('checkpoint_id');
 const form = document.getElementById('eventForm');
 const statusEl = document.getElementById('saveStatus');
-const sitePreview = document.getElementById('entrySitePreview');
-const noImageMsg = document.getElementById('entrySiteNoImage');
 const collectorDisplay = document.getElementById('collector_name_display');
 const greetingEl = document.getElementById('entryGreeting');
-const mapPanel = document.getElementById('mapPanel');
-const mapToggleBtn = document.getElementById('mapToggleBtn');
 const plateInput = document.getElementById('plate');
 const notesInput = document.getElementById('notes');
 const studyPeriodLabel = document.getElementById('studyPeriodLabel');
@@ -175,6 +156,8 @@ const sessionStatusLabel = document.getElementById('sessionStatusLabel');
 const checkpointSummaryLabel = document.getElementById('checkpointSummaryLabel');
 const startStudyBtn = document.getElementById('startStudyBtn');
 const endStudyBtn = document.getElementById('endStudyBtn');
+const recentEntriesToggle = document.getElementById('recentEntriesToggle');
+const recentEntriesPanel = document.getElementById('recentEntriesPanel');
 const recentEntryBody = document.getElementById('recentEntryBody');
 
 function forceUppercaseInput(el) {
@@ -213,23 +196,6 @@ function getCurrentStudyPeriod() {
 
 function currentStudyPeriodLabel() {
   return getCurrentStudyPeriod() === 'morning' ? 'Morning Study' : 'Afternoon Study';
-}
-
-function applyMapPanelState() {
-  if (!mapPanel || !mapToggleBtn) return;
-  const open = mapPanel.classList.contains('open');
-  mapToggleBtn.textContent = open ? 'Hide Map' : 'Show Map';
-}
-
-if (mapPanel && mapToggleBtn) {
-  if (window.matchMedia('(max-width: 700px)').matches) {
-    mapPanel.classList.remove('open');
-  }
-  applyMapPanelState();
-  mapToggleBtn.addEventListener('click', () => {
-    mapPanel.classList.toggle('open');
-    applyMapPanelState();
-  });
 }
 
 function selectedRadioValue(name) {
@@ -368,27 +334,29 @@ async function loadRecentEntries() {
     return;
   }
 
-  const res = await fetch(`api/recent_checkpoint_events.php?site_id=${siteId}&checkpoint_id=${checkpointId}&limit=5`);
+  const res = await fetch(`api/recent_checkpoint_events.php?site_id=${siteId}&checkpoint_id=${checkpointId}&limit=6`);
   const data = await res.json();
   if (!data.ok) {
-    recentEntryBody.innerHTML = '<tr><td colspan=\"5\">Unable to load recent entries.</td></tr>';
+    recentEntryBody.innerHTML = '<tr><td colspan=\"6\">Unable to load recent entries.</td></tr>';
     return;
   }
   recentEntryBody.innerHTML = '';
   for (const e of data.events) {
     const tr = document.createElement('tr');
-    tr.innerHTML = `<td>${e.event_time}</td><td>${e.direction}</td><td>${e.plate_raw || ''}</td><td>${e.vehicle_type}/${e.vehicle_color}</td><td><button type=\"button\" class=\"secondary\" data-edit=\"${e.id}\">Edit</button> <button type=\"button\" class=\"warn\" data-del=\"${e.id}\">Delete</button></td>`;
+    tr.innerHTML = `<td>${e.id}</td><td>${e.event_time}</td><td>${e.direction}</td><td>${e.plate_raw || ''}</td><td>${e.vehicle_type}/${e.vehicle_color}</td><td><button type=\"button\" class=\"secondary\" data-edit=\"${e.id}\">Edit</button> <button type=\"button\" class=\"warn\" data-del=\"${e.id}\">Delete</button></td>`;
     recentEntryBody.appendChild(tr);
   }
   if ((data.events || []).length === 0) {
-    recentEntryBody.innerHTML = '<tr><td colspan=\"5\">No entries yet.</td></tr>';
+    recentEntryBody.innerHTML = '<tr><td colspan=\"6\">No entries yet.</td></tr>';
   }
 }
 
 async function refreshEntryContext() {
   await loadSessionState();
   await loadCheckpointSummary();
-  await loadRecentEntries();
+  if (recentEntriesPanel && recentEntriesPanel.style.display !== 'none') {
+    await loadRecentEntries();
+  }
 }
 
 if (siteInput && cpInput && !lockedCheckpoint) {
@@ -410,17 +378,6 @@ if (siteInput && cpInput && !lockedCheckpoint) {
     syncCollectorForSelectedCheckpoint();
     syncGreeting(site.name || '');
     await refreshEntryContext();
-
-    if (sitePreview) {
-      if (site.image_path) {
-        sitePreview.src = site.image_path;
-        sitePreview.style.display = 'block';
-        if (noImageMsg) noImageMsg.style.display = 'none';
-      } else {
-        sitePreview.style.display = 'none';
-        if (noImageMsg) noImageMsg.style.display = 'block';
-      }
-    }
   });
 }
 
@@ -434,6 +391,18 @@ if (cpInput) {
 syncCollectorForSelectedCheckpoint();
 syncGreeting();
 refreshEntryContext();
+
+if (recentEntriesToggle && recentEntriesPanel) {
+  recentEntriesToggle.addEventListener('click', async () => {
+    const isHidden = recentEntriesPanel.style.display === 'none';
+    recentEntriesPanel.style.display = isHidden ? 'block' : 'none';
+    recentEntriesToggle.textContent = isHidden ? 'Hide' : 'Show';
+    recentEntriesToggle.setAttribute('aria-expanded', isHidden ? 'true' : 'false');
+    if (isHidden) {
+      await loadRecentEntries();
+    }
+  });
+}
 
 if (startStudyBtn) {
   startStudyBtn.addEventListener('click', async () => {
