@@ -12,8 +12,13 @@ if ($siteId <= 0 || $checkpointId <= 0) {
     json_response(['ok' => false, 'error' => 'Site and checkpoint are required.'], 422);
 }
 
-$stmt = db_prepare('SELECT id, event_time, direction, plate_raw, vehicle_type, vehicle_color, notes FROM traffic_events WHERE site_id = ? AND checkpoint_id = ? ORDER BY id DESC LIMIT ?');
-$stmt->bind_param('iii', $siteId, $checkpointId, $limit);
+$sql = "SELECT id, event_time, direction, plate_raw, vehicle_type, vehicle_color, notes
+        FROM traffic_events
+        WHERE site_id = ? AND checkpoint_id = ?
+        ORDER BY id DESC
+        LIMIT {$limit}";
+$stmt = db_prepare($sql);
+$stmt->bind_param('ii', $siteId, $checkpointId);
 $stmt->execute();
 $rows = $stmt->get_result()?->fetch_all(MYSQLI_ASSOC) ?: [];
 $stmt->close();

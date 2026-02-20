@@ -29,7 +29,8 @@ if ($action === 'delete') {
 if ($action === 'edit') {
     $plate = trim((string)($_POST['plate_raw'] ?? ''));
     $notes = trim((string)($_POST['notes'] ?? ''));
-    $plateNorm = normalize_plate($plate);
+    $plate = normalize_plate($plate);
+    $plateNorm = $plate;
 
     $stmt = db_prepare('UPDATE traffic_events SET plate_raw = ?, plate_norm = ?, notes = ? WHERE id = ? AND site_id = ? AND checkpoint_id = ?');
     $stmt->bind_param('sssiii', $plate, $plateNorm, $notes, $eventId, $siteId, $checkpointId);

@@ -26,6 +26,10 @@ function normalize_plate(?string $plate): string
 {
     $plate = strtoupper((string)$plate);
     $plate = preg_replace('/[^A-Z0-9]/', '', $plate) ?? '';
+    $plate = strtr($plate, [
+        'O' => '0',
+        'I' => '1',
+    ]);
     return $plate;
 }
 

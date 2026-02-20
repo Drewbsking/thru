@@ -87,7 +87,7 @@ render_head('Data Entry');
       <div class="form-row">
         <div>
           <label>License Plate Number (First 3 characters)</label>
-          <input id="plate" maxlength="32" placeholder="ABC">
+          <input id="plate" maxlength="32" placeholder="ABC" style="text-transform:uppercase;" autocapitalize="characters" spellcheck="false">
         </div>
         <div>
           <label>Data Collector</label>
@@ -127,7 +127,7 @@ render_head('Data Entry');
         <div class="form-row" id="otherColorWrap" style="display:none; margin-top:0.5rem;">
           <div>
             <label>Other Color</label>
-            <input id="other_color" maxlength="50" placeholder="Enter color">
+            <input id="other_color" maxlength="50" placeholder="ENTER COLOR" style="text-transform:uppercase;" autocapitalize="characters" spellcheck="false">
           </div>
         </div>
       </div>
@@ -135,7 +135,7 @@ render_head('Data Entry');
       <div class="form-row">
         <div>
           <label>Comments (Optional)</label>
-          <textarea id="notes" maxlength="255" placeholder="Any other details"></textarea>
+          <textarea id="notes" maxlength="255" placeholder="ANY OTHER DETAILS" style="text-transform:uppercase;" autocapitalize="characters"></textarea>
         </div>
       </div>
       <div class="actions">
@@ -189,12 +189,34 @@ const startStudyBtn = document.getElementById('startStudyBtn');
 const endStudyBtn = document.getElementById('endStudyBtn');
 const recentEntryBody = document.getElementById('recentEntryBody');
 
+function forceUppercaseInput(el) {
+  if (!el) return;
+  el.addEventListener('input', () => {
+    const start = el.selectionStart;
+    const end = el.selectionEnd;
+    el.value = (el.value || '').toUpperCase();
+    if (start !== null && end !== null) {
+      el.setSelectionRange(start, end);
+    }
+  });
+}
+
 function getSiteId() {
-  return Number(lockedCheckpoint ? initialSiteId : (siteInput ? siteInput.value : 0));
+  if (lockedCheckpoint) return Number(initialSiteId || 0);
+  if (!siteInput) return 0;
+  if (!siteInput.value && siteInput.options.length > 0) {
+    siteInput.value = siteInput.options[0].value;
+  }
+  return Number(siteInput.value || 0);
 }
 
 function getCheckpointId() {
-  return Number(lockedCheckpoint ? initialCheckpointId : (cpInput ? cpInput.value : 0));
+  if (lockedCheckpoint) return Number(initialCheckpointId || 0);
+  if (!cpInput) return 0;
+  if (!cpInput.value && cpInput.options.length > 0) {
+    cpInput.value = cpInput.options[0].value;
+  }
+  return Number(cpInput.value || 0);
 }
 
 function getCurrentStudyPeriod() {
@@ -263,11 +285,6 @@ function notifySuccess() {
   }
 }
 
-function hasAmbiguousPlate(plate) {
-  const p = (plate || '').toUpperCase();
-  return /[O01IL]/.test(p);
-}
-
 function currentEntrySignature() {
   return [
     getSiteId(),
@@ -293,6 +310,9 @@ document.querySelectorAll('input[name="vehicle_type"], input[name="direction"]')
 });
 if (plateInput) plateInput.addEventListener('input', clearPendingConfirm);
 if (notesInput) notesInput.addEventListener('input', clearPendingConfirm);
+forceUppercaseInput(plateInput);
+forceUppercaseInput(otherColorInput);
+forceUppercaseInput(notesInput);
 
 function syncCollectorForSelectedCheckpoint() {
   if (!cpInput) return;
@@ -357,7 +377,11 @@ async function loadCheckpointSummary() {
 async function loadRecentEntries() {
   const siteId = getSiteId();
   const checkpointId = getCheckpointId();
-  if (!siteId || !checkpointId || !recentEntryBody) return;
+  if (!recentEntryBody) return;
+  if (!siteId || !checkpointId) {
+    recentEntryBody.innerHTML = '<tr><td colspan=\"5\">Select a valid checkpoint to view entries.</td></tr>';
+    return;
+  }
 
   const res = await fetch(`api/recent_checkpoint_events.php?site_id=${siteId}&checkpoint_id=${checkpointId}&limit=5`);
   const data = await res.json();
@@ -539,21 +563,13 @@ if (form) {
     payload.append('site_id', lockedCheckpoint ? String(initialSiteId) : siteInput.value);
     payload.append('checkpoint_id', lockedCheckpoint ? String(initialCheckpointId) : cpInput.value);
     payload.append('direction', selectedRadioValue('direction') || 'In');
-    payload.append('plate', document.getElementById('plate').value);
+    payload.append('plate', (document.getElementById('plate').value || '').toUpperCase());
     payload.append('vehicle_type', vehicleType);
-    payload.append('vehicle_color', vehicleColor);
+    payload.append('vehicle_color', (vehicleColor || '').toUpperCase());
     payload.append('observer_name', collectorName);
-    payload.append('notes', document.getElementById('notes').value);
+    payload.append('notes', (document.getElementById('notes').value || '').toUpperCase());
 
     const signature = currentEntrySignature();
-    const plateValue = plateInput ? plateInput.value.trim() : '';
-    if (hasAmbiguousPlate(plateValue) && pendingConfirmSignature !== signature) {
-      pendingConfirmSignature = signature;
-      statusEl.textContent = 'Potential plate typo (O/0 or I/1/L). Press Save Event again to confirm.';
-      statusEl.className = 'status warn';
-      return;
-    }
-
     if (pendingConfirmSignature !== signature) {
       const dupRes = await fetch('api/check_duplicate.php', { method: 'POST', body: payload });
       const dupJson = await dupRes.json();

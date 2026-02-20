@@ -24,11 +24,12 @@ if ($siteId <= 0 || $checkpointId <= 0 || $vehicleType === '' || $vehicleColor =
 // Event time is always server-side save timestamp.
 $eventTime = date('Y-m-d H:i:s');
 
-$plateNorm = normalize_plate($plateRaw);
+$plateRaw = normalize_plate($plateRaw);
+$plateNorm = $plateRaw;
 $studySessionId = active_study_session_id($siteId);
 $studySessionIdParam = $studySessionId ?? 0;
 
-$checkStmt = db_prepare('SELECT c.id FROM checkpoints c INNER JOIN sites s ON s.id = c.site_id WHERE c.id = ? AND c.site_id = ? AND c.is_active = 1 AND s.is_active = 1 LIMIT 1');
+$checkStmt = db_prepare('SELECT c.id FROM checkpoints c WHERE c.id = ? AND c.site_id = ? AND c.is_active = 1 LIMIT 1');
 $checkStmt->bind_param('ii', $checkpointId, $siteId);
 $checkStmt->execute();
 $exists = $checkStmt->get_result()?->fetch_assoc();
