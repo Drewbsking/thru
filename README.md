@@ -18,7 +18,7 @@
 - Unmatched `Out` = local departure (origin), not cut-through.
 - `Total Volume` is deduped: matched pairs count once; unmatched events count once.
 - Policy status is based on `cut_through_percent >= 25` (configurable in setup).
-- Study windows are hour-based (default is last 2 hours) to match short roadside collection sessions.
+- Dashboard and details filter by study period: `Morning Study` or `Afternoon Study` for the selected day.
 - `Data Collector Name` is configured once in Site Setup and auto-attached to event records in Data Entry.
 
 ## APIs

@@ -36,6 +36,7 @@ render_head('Site Setup');
     <form id="passwordForm">
       <div class="form-row">
         <div><label>New Password</label><input id="new_password" type="password" minlength="10" required></div>
+        <div><label>Confirm New Password</label><input id="confirm_new_password" type="password" minlength="10" required></div>
       </div>
       <button type="submit" class="secondary">Update Password</button>
       <p id="passwordStatus" class="status small"></p>
@@ -244,13 +245,23 @@ document.getElementById('settingsForm').addEventListener('submit', async (e) => 
 
 document.getElementById('passwordForm').addEventListener('submit', async (e) => {
   e.preventDefault();
+  const newPassword = document.getElementById('new_password').value;
+  const confirmPassword = document.getElementById('confirm_new_password').value;
+  if (newPassword !== confirmPassword) {
+    document.getElementById('passwordStatus').textContent = 'Passwords do not match.';
+    document.getElementById('passwordStatus').className = 'status warn';
+    return;
+  }
+
   const out = await post('save_auth_password', {
-    new_password: document.getElementById('new_password').value,
+    new_password: newPassword,
+    confirm_new_password: confirmPassword,
   });
   document.getElementById('passwordStatus').textContent = out.ok ? 'Password updated.' : out.error;
   document.getElementById('passwordStatus').className = out.ok ? 'status ok' : 'status warn';
   if (out.ok) {
     document.getElementById('new_password').value = '';
+    document.getElementById('confirm_new_password').value = '';
   }
 });
 

@@ -23,12 +23,10 @@ render_head('Dashboard');
       </select>
     </div>
     <div>
-      <label>Study Window</label>
-      <select id="hours">
-        <option value="1">Last 1 hour</option>
-        <option value="2" selected>Last 2 hours</option>
-        <option value="4">Last 4 hours</option>
-        <option value="8">Last 8 hours</option>
+      <label>Study Period</label>
+      <select id="study_period">
+        <option value="morning" selected>Morning Study</option>
+        <option value="afternoon">Afternoon Study</option>
       </select>
     </div>
     <div>
@@ -75,8 +73,8 @@ function kpiCard(label, value, css='') {
 
 async function loadDashboard() {
   const siteId = document.getElementById('site_id').value;
-  const hours = document.getElementById('hours').value;
-  const res = await fetch(`api/dashboard_data.php?site_id=${siteId}&hours=${hours}`);
+  const studyPeriod = document.getElementById('study_period').value;
+  const res = await fetch(`api/dashboard_data.php?site_id=${siteId}&study_period=${studyPeriod}`);
   const json = await res.json();
   if (!json.ok) return;
 
@@ -136,7 +134,7 @@ async function loadDashboard() {
 
 document.getElementById('refreshBtn').addEventListener('click', loadDashboard);
 document.getElementById('site_id').addEventListener('change', loadDashboard);
-document.getElementById('hours').addEventListener('change', loadDashboard);
+document.getElementById('study_period').addEventListener('change', loadDashboard);
 loadDashboard();
 </script>
 <?php render_foot(); ?>

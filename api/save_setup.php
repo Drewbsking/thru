@@ -65,8 +65,12 @@ function save_settings(): void
 function save_auth_password(): void
 {
     $password = (string)($_POST['new_password'] ?? '');
+    $confirm = (string)($_POST['confirm_new_password'] ?? '');
     if (strlen($password) < 10) {
         json_response(['ok' => false, 'error' => 'Password must be at least 10 characters.'], 422);
+    }
+    if ($password !== $confirm) {
+        json_response(['ok' => false, 'error' => 'Passwords do not match.'], 422);
     }
 
     $hash = password_hash($password, PASSWORD_DEFAULT);
