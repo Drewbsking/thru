@@ -107,3 +107,71 @@ code.inline {
   border-radius: 4px;
   padding: 0.1rem 0.25rem;
 }
+
+.choice-block {
+  margin-bottom: 0.8rem;
+}
+
+.choice-title {
+  font-size: 0.95rem;
+  font-weight: 700;
+  margin-bottom: 0.35rem;
+}
+
+.radio-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+  gap: 0.5rem;
+}
+
+.radio-grid.two-col {
+  grid-template-columns: repeat(2, minmax(120px, 1fr));
+  max-width: 320px;
+}
+
+.radio-chip {
+  display: block;
+}
+
+.radio-chip input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.radio-chip span {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 46px;
+  padding: 0.5rem 0.7rem;
+  border: 1px solid #c8d0df;
+  border-radius: 10px;
+  background: #fff;
+  font-weight: 600;
+  text-align: center;
+}
+
+.radio-chip input:checked + span {
+  background: #0f766e;
+  border-color: #0f766e;
+  color: #fff;
+}
+
+@media (max-width: 390px) {
+  .page {
+    padding: 0 0.55rem;
+  }
+
+  .topbar {
+    padding: 0.7rem 0.75rem;
+  }
+
+  .nav {
+    gap: 0.45rem;
+  }
+
+  .radio-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}

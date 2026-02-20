@@ -90,12 +90,15 @@ function classify_events(array $events, array $distanceMap, float $speedMph, flo
             }
 
             $score = compute_match_score($in, $out);
+            $distanceMiles = (float)$distanceMap[$distKey];
+            $avgSpeedMph = $elapsed > 0 ? round($distanceMiles / ($elapsed / 60), 2) : 0.0;
             $candidates[] = [
                 'in_id' => (int)$in['id'],
                 'out_id' => (int)$out['id'],
                 'elapsed_minutes' => round($elapsed, 2),
                 'expected_minutes' => round($expected, 2),
-                'distance_miles' => (float)$distanceMap[$distKey],
+                'distance_miles' => $distanceMiles,
+                'avg_speed_mph' => $avgSpeedMph,
                 'confidence' => $score,
                 'in_event' => $in,
                 'out_event' => $out,

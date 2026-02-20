@@ -3,9 +3,15 @@
 declare(strict_types=1);
 
 require_once __DIR__ . '/lib/bootstrap.php';
+require_once __DIR__ . '/lib/auth.php';
 require_once __DIR__ . '/lib/utils.php';
 
 ensure_schema();
+if (!is_authenticated()) {
+    http_response_code(401);
+    echo 'Unauthorized';
+    exit;
+}
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     http_response_code(405);

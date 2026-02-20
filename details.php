@@ -9,7 +9,7 @@ $siteId = (int)($_GET['site_id'] ?? current_site_id());
 render_head('Cut-Through Details');
 ?>
 <section class="card">
-  <h1>Cut-Through Details</h1>
+  <h1>N-CAT Cut-Through Details</h1>
   <p class="small">High confidence matches are paired one-to-one. Unmatched In events are treated as local arrivals, unmatched Out events as local departures.</p>
   <div class="form-row">
     <div>
@@ -23,9 +23,10 @@ render_head('Cut-Through Details');
     <div>
       <label>Window</label>
       <select id="hours">
-        <option value="24" selected>Last 24 hours</option>
-        <option value="48">Last 48 hours</option>
-        <option value="168">Last 7 days</option>
+        <option value="1">Last 1 hour</option>
+        <option value="2" selected>Last 2 hours</option>
+        <option value="4">Last 4 hours</option>
+        <option value="8">Last 8 hours</option>
       </select>
     </div>
     <div>
@@ -38,7 +39,7 @@ render_head('Cut-Through Details');
 <section class="card" style="margin-top:1rem;">
   <h2>Matched Cut-Through Events</h2>
   <table>
-    <thead><tr><th>In Time</th><th>In CP</th><th>Out Time</th><th>Out CP</th><th>Distance</th><th>Elapsed</th><th>Expected</th><th>Confidence</th><th>Vehicle</th></tr></thead>
+    <thead><tr><th>In Time</th><th>In CP</th><th>Out Time</th><th>Out CP</th><th>Distance</th><th>Elapsed</th><th>Expected</th><th>Avg Speed</th><th>Confidence</th><th>Vehicle</th></tr></thead>
     <tbody id="matchesBody"></tbody>
   </table>
 </section>
@@ -63,7 +64,7 @@ function csvEscape(v) {
 }
 
 function exportCsv() {
-  const rows = [['in_time','in_checkpoint','out_time','out_checkpoint','distance_miles','elapsed_minutes','expected_minutes','confidence','plate_in','plate_out','vehicle_type','vehicle_color']];
+  const rows = [['in_time','in_checkpoint','out_time','out_checkpoint','distance_miles','elapsed_minutes','expected_minutes','avg_speed_mph','confidence','plate_in','plate_out','vehicle_type','vehicle_color']];
   for (const m of matchesCache) {
     rows.push([
       m.in_event.event_time,
@@ -73,6 +74,7 @@ function exportCsv() {
       m.distance_miles,
       m.elapsed_minutes,
       m.expected_minutes,
+      m.avg_speed_mph,
       m.confidence,
       m.in_event.plate_raw || '',
       m.out_event.plate_raw || '',
@@ -105,7 +107,7 @@ async function loadDetails() {
     const tr = document.createElement('tr');
     tr.innerHTML = `<td>${m.in_event.event_time}</td><td>${m.in_event.checkpoint_name}</td>
       <td>${m.out_event.event_time}</td><td>${m.out_event.checkpoint_name}</td><td>${m.distance_miles}</td>
-      <td>${m.elapsed_minutes}</td><td>${m.expected_minutes}</td><td>${m.confidence}</td><td>${vehicle}</td>`;
+      <td>${m.elapsed_minutes}</td><td>${m.expected_minutes}</td><td>${m.avg_speed_mph} mph</td><td>${m.confidence}</td><td>${vehicle}</td>`;
     matchBody.appendChild(tr);
   }
 

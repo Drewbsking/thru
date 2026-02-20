@@ -7,7 +7,7 @@ require_once __DIR__ . '/lib/layout.php';
 render_head('Site Setup');
 ?>
 <section class="card">
-  <h1>Site Setup</h1>
+  <h1>N-CAT Site Setup</h1>
   <p class="small">Configure 2-3 checkpoints per site (or more), upload site image, define checkpoint distances, and control cut-through behavior. Recalculation uses latest settings immediately.</p>
 </section>
 
@@ -25,9 +25,20 @@ render_head('Site Setup');
       </div>
       <div class="form-row">
         <div><label>Policy Cut-Through %</label><input id="policy_cut_through_percent" type="number" min="1" max="100" step="1"></div>
+        <div><label>Data Collector Name</label><input id="data_collector_name" maxlength="80" placeholder="Collector name"></div>
       </div>
       <button type="submit">Save Settings</button>
       <p id="settingsStatus" class="status small"></p>
+    </form>
+
+    <hr style="margin:1rem 0; border:0; border-top:1px solid #d8dde7;">
+    <h3>Access Password</h3>
+    <form id="passwordForm">
+      <div class="form-row">
+        <div><label>New Password</label><input id="new_password" type="password" minlength="10" required></div>
+      </div>
+      <button type="submit" class="secondary">Update Password</button>
+      <p id="passwordStatus" class="status small"></p>
     </form>
   </article>
 
@@ -157,7 +168,7 @@ function renderCheckpoints() {
 
 function renderSettings() {
   const s = context.settings;
-  for (const k of ['speed_mph','buffer_minutes','min_confidence','poll_seconds','policy_cut_through_percent']) {
+  for (const k of ['speed_mph','buffer_minutes','min_confidence','poll_seconds','policy_cut_through_percent','data_collector_name']) {
     document.getElementById(k).value = s[k];
   }
 }
@@ -223,11 +234,24 @@ document.getElementById('settingsForm').addEventListener('submit', async (e) => 
     min_confidence: document.getElementById('min_confidence').value,
     poll_seconds: document.getElementById('poll_seconds').value,
     policy_cut_through_percent: document.getElementById('policy_cut_through_percent').value,
+    data_collector_name: document.getElementById('data_collector_name').value,
   };
   const out = await post('save_settings', payload);
   document.getElementById('settingsStatus').textContent = out.ok ? 'Settings saved. Dashboard recalculation uses these values immediately.' : out.error;
   document.getElementById('settingsStatus').className = out.ok ? 'status ok' : 'status warn';
   await loadContext();
+});
+
+document.getElementById('passwordForm').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const out = await post('save_auth_password', {
+    new_password: document.getElementById('new_password').value,
+  });
+  document.getElementById('passwordStatus').textContent = out.ok ? 'Password updated.' : out.error;
+  document.getElementById('passwordStatus').className = out.ok ? 'status ok' : 'status warn';
+  if (out.ok) {
+    document.getElementById('new_password').value = '';
+  }
 });
 
 document.getElementById('newSiteForm').addEventListener('submit', async (e) => {

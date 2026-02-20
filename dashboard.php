@@ -6,11 +6,13 @@ require_once __DIR__ . '/lib/layout.php';
 
 $siteId = (int)($_GET['site_id'] ?? current_site_id());
 $sites = all_sites();
+$collectorName = app_setting('data_collector_name', '');
 render_head('Dashboard');
 ?>
 <section class="card">
-  <h1>Live Dashboard</h1>
+  <h1>N-CAT Dashboard</h1>
   <p class="small">Auto-refreshes every <span id="pollLabel">10</span> seconds. Cut-through is calculated with expected travel time from checkpoint distance and speed setting.</p>
+  <p class="small">Data Collector: <strong id="collectorLabel"><?= h($collectorName !== '' ? $collectorName : 'Not set in Site Setup') ?></strong></p>
   <div class="form-row">
     <div>
       <label>Site</label>
@@ -23,10 +25,10 @@ render_head('Dashboard');
     <div>
       <label>Study Window</label>
       <select id="hours">
-        <option value="6">Last 6 hours</option>
-        <option value="24" selected>Last 24 hours</option>
-        <option value="48">Last 48 hours</option>
-        <option value="168">Last 7 days</option>
+        <option value="1">Last 1 hour</option>
+        <option value="2" selected>Last 2 hours</option>
+        <option value="4">Last 4 hours</option>
+        <option value="8">Last 8 hours</option>
       </select>
     </div>
     <div>
@@ -42,14 +44,14 @@ render_head('Dashboard');
   <article class="card">
     <h2>Checkpoint Counts</h2>
     <table>
-      <thead><tr><th>Checkpoint</th><th>In</th><th>Out</th><th>Total</th></tr></thead>
+      <thead><tr><th>Checkpoint</th><th>In</th><th>Out</th><th>Total (Two-Way)</th></tr></thead>
       <tbody id="checkpointBody"></tbody>
     </table>
   </article>
   <article class="card">
     <h2>Cut-Through Matches</h2>
     <table>
-      <thead><tr><th>In</th><th>Out</th><th>Elapsed</th><th>Expected</th><th>Confidence</th></tr></thead>
+      <thead><tr><th>In</th><th>Out</th><th>Elapsed</th><th>Expected</th><th>Avg Speed</th><th>Confidence</th></tr></thead>
       <tbody id="matchBody"></tbody>
     </table>
   </article>
@@ -80,15 +82,20 @@ async function loadDashboard() {
 
   pollMs = Math.max(5000, Number(json.settings.poll_seconds || 10) * 1000);
   document.getElementById('pollLabel').textContent = String(pollMs / 1000);
+  document.getElementById('collectorLabel').textContent = json.settings.data_collector_name || 'Not set in Site Setup';
 
   const summary = json.summary;
   const policyStatus = summary.meets_policy ? 'Meets 25% Policy' : 'Below 25% Policy';
   const policyClass = summary.meets_policy ? 'ok' : 'warn';
+  const avgCutThroughSpeed = json.matches.length
+    ? (json.matches.reduce((acc, m) => acc + Number(m.avg_speed_mph || 0), 0) / json.matches.length).toFixed(2)
+    : '0.00';
 
   document.getElementById('kpis').innerHTML = [
-    kpiCard('Total Volume (deduped)', summary.total_volume),
+    kpiCard('Total (Two-Way)', summary.total_volume),
     kpiCard('Cut-Through Vehicles', summary.cut_through_count),
     kpiCard('Cut-Through %', `${summary.cut_through_percent}%`, policyClass),
+    kpiCard('Avg Cut-Through Speed', `${avgCutThroughSpeed} mph`),
     kpiCard('Policy Status', policyStatus, policyClass),
     kpiCard('Local Arrivals (In only)', summary.local_arrivals_count),
     kpiCard('Local Departures (Out only)', summary.local_departures_count),
@@ -110,6 +117,7 @@ async function loadDashboard() {
       <td>${m.out_event.checkpoint_name} ${m.out_event.event_time}</td>
       <td>${m.elapsed_minutes} min</td>
       <td>${m.expected_minutes} min</td>
+      <td>${m.avg_speed_mph} mph</td>
       <td>${m.confidence}</td>`;
     matchBody.appendChild(tr);
   });

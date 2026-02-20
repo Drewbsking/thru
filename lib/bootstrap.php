@@ -68,12 +68,17 @@ function ensure_schema(): void
 
 function seed_defaults(): void
 {
+    $initialPassword = getenv('THRU_APP_PASSWORD') ?: 'change-me-now';
+    $initialHash = password_hash($initialPassword, PASSWORD_DEFAULT);
+
     $defaults = [
         'speed_mph' => '25',
         'buffer_minutes' => '1',
         'min_confidence' => '70',
         'poll_seconds' => '10',
         'policy_cut_through_percent' => '25',
+        'data_collector_name' => '',
+        'auth_password_hash' => $initialHash,
     ];
 
     $stmt = db_prepare('INSERT INTO app_settings (setting_key, setting_value) VALUES (?, ?) ON DUPLICATE KEY UPDATE setting_value = setting_value');

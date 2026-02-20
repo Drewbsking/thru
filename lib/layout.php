@@ -4,25 +4,28 @@ declare(strict_types=1);
 
 require_once __DIR__ . '/bootstrap.php';
 require_once __DIR__ . '/utils.php';
+require_once __DIR__ . '/auth.php';
 
 ensure_schema();
+require_auth_page();
 
 function render_head(string $title): void
 {
     echo '<!DOCTYPE html><html lang="en"><head>';
     echo '<meta charset="UTF-8">';
     echo '<meta name="viewport" content="width=device-width, initial-scale=1.0">';
-    echo '<title>' . h($title) . '</title>';
+    echo '<title>' . h($title . ' | N-CAT') . '</title>';
     echo '<link rel="stylesheet" href="assets/app.css">';
     echo '</head><body>';
     echo '<header class="topbar">';
-    echo '<div class="brand">Traffic Study Tool</div>';
+    echo '<div class="brand">N-CAT: Neighborhood Cut-through Analysis Tool</div>';
     echo '<nav class="nav">';
     echo '<a href="index.php">Home</a>';
     echo '<a href="dashboard.php">Dashboard</a>';
     echo '<a href="entry.php">Data Entry</a>';
     echo '<a href="details.php">Cut-Through Details</a>';
     echo '<a href="setup.php">Site Setup</a>';
+    echo '<a href="logout.php">Logout</a>';
     echo '</nav></header>';
     echo '<main class="page">';
 }

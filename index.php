@@ -10,12 +10,12 @@ $activeId = current_site_id();
 render_head('Home');
 ?>
 <section class="hero card">
-  <h1>Traffic Study Home</h1>
-  <p class="small">Start here so staff do not need to remember URLs. Pick the site, then launch checkpoint-specific data entry or view live analytics.</p>
+  <h1>N-CAT Home</h1>
+  <p class="small">Start here so staff do not need to remember URLs. Pick the site, then launch checkpoint-specific data entry or view N-CAT analytics.</p>
   <div class="actions">
-    <a class="btn" href="dashboard.php">Open Dashboard</a>
-    <a class="btn secondary" href="details.php">Cut-Through Details</a>
-    <a class="btn secondary" href="setup.php">Site Setup</a>
+    <a class="btn" href="dashboard.php">Open N-CAT Dashboard</a>
+    <a class="btn secondary" href="details.php">N-CAT Cut-Through Details</a>
+    <a class="btn secondary" href="setup.php">N-CAT Site Setup</a>
   </div>
 </section>
 
@@ -30,7 +30,7 @@ render_head('Home');
         <p class="small">No site image uploaded yet.</p>
       <?php endif; ?>
       <div class="actions">
-        <a class="btn secondary" href="entry.php?site_id=<?= (int)$site['id'] ?>">Open Data Entry</a>
+        <a class="btn secondary" href="entry.php?site_id=<?= (int)$site['id'] ?>">Open N-CAT Data Entry</a>
       </div>
       <div class="small" style="margin-top:0.6rem;">Checkpoint Quick Links:</div>
       <div class="actions">
