@@ -31,12 +31,7 @@ render_head('Data Entry');
     <p id="entryGreeting" class="status ok">You are recording at <?= h((string)$site['name']) ?>.</p>
   <?php endif; ?>
   <p class="small" id="studyPeriodLabel">Current Study Period: --</p>
-  <p class="small" id="sessionStatusLabel">Study Session: --</p>
   <p class="small" id="checkpointSummaryLabel">Checkpoint Summary: --</p>
-  <div class="actions" style="margin-top:0.3rem; margin-bottom:0.5rem;">
-    <button type="button" id="startStudyBtn">Start Study</button>
-    <button type="button" id="endStudyBtn" class="secondary">End Study</button>
-  </div>
   <p class="small">Checkpoint can be locked by link. This prevents wrong checkpoint tagging when different observers are logging traffic. Studies are typically short roadside sessions (around 2 hours).</p>
 
   <?php if (!$site): ?>
@@ -152,10 +147,7 @@ const greetingEl = document.getElementById('entryGreeting');
 const plateInput = document.getElementById('plate');
 const notesInput = document.getElementById('notes');
 const studyPeriodLabel = document.getElementById('studyPeriodLabel');
-const sessionStatusLabel = document.getElementById('sessionStatusLabel');
 const checkpointSummaryLabel = document.getElementById('checkpointSummaryLabel');
-const startStudyBtn = document.getElementById('startStudyBtn');
-const endStudyBtn = document.getElementById('endStudyBtn');
 const recentEntriesToggle = document.getElementById('recentEntriesToggle');
 const recentEntriesPanel = document.getElementById('recentEntriesPanel');
 const recentEntryBody = document.getElementById('recentEntryBody');
@@ -274,38 +266,6 @@ function syncGreeting(selectedSiteName = null) {
     : `You are recording at ${siteName}.`;
 }
 
-async function loadSessionState() {
-  const siteId = getSiteId();
-  if (!siteId || !sessionStatusLabel) return;
-  const period = getCurrentStudyPeriod();
-  studyPeriodLabel.textContent = `Current Study Period: ${currentStudyPeriodLabel()}`;
-  const res = await fetch(`api/study_session.php?site_id=${siteId}&study_period=${period}`);
-  let data = null;
-  try {
-    data = await res.json();
-  } catch (e) {
-    sessionStatusLabel.textContent = `Study Session: service error (${res.status})`;
-    if (startStudyBtn) startStudyBtn.disabled = false;
-    if (endStudyBtn) endStudyBtn.disabled = true;
-    return;
-  }
-  if (!data.ok) {
-    sessionStatusLabel.textContent = 'Study Session: error loading status';
-    if (startStudyBtn) startStudyBtn.disabled = false;
-    if (endStudyBtn) endStudyBtn.disabled = true;
-    return;
-  }
-  if (data.active_session) {
-    sessionStatusLabel.textContent = `Study Session: Active (started ${data.active_session.started_at})`;
-    if (startStudyBtn) startStudyBtn.disabled = true;
-    if (endStudyBtn) endStudyBtn.disabled = false;
-  } else {
-    sessionStatusLabel.textContent = `Study Session: Not started (${currentStudyPeriodLabel()})`;
-    if (startStudyBtn) startStudyBtn.disabled = false;
-    if (endStudyBtn) endStudyBtn.disabled = true;
-  }
-}
-
 async function loadCheckpointSummary() {
   const siteId = getSiteId();
   const checkpointId = getCheckpointId();
@@ -352,7 +312,9 @@ async function loadRecentEntries() {
 }
 
 async function refreshEntryContext() {
-  await loadSessionState();
+  if (studyPeriodLabel) {
+    studyPeriodLabel.textContent = `Current Study Period: ${currentStudyPeriodLabel()}`;
+  }
   await loadCheckpointSummary();
   if (recentEntriesPanel && recentEntriesPanel.style.display !== 'none') {
     await loadRecentEntries();
@@ -401,34 +363,6 @@ if (recentEntriesToggle && recentEntriesPanel) {
     if (isHidden) {
       await loadRecentEntries();
     }
-  });
-}
-
-if (startStudyBtn) {
-  startStudyBtn.addEventListener('click', async () => {
-    const fd = new FormData();
-    fd.append('action', 'start');
-    fd.append('site_id', String(getSiteId()));
-    fd.append('study_period', getCurrentStudyPeriod());
-    const res = await fetch('api/study_session.php', { method: 'POST', body: fd });
-    const data = await res.json();
-    statusEl.textContent = data.ok ? (data.message || 'Study started.') : (data.error || 'Unable to start study.');
-    statusEl.className = data.ok ? 'status ok' : 'status warn';
-    await refreshEntryContext();
-  });
-}
-
-if (endStudyBtn) {
-  endStudyBtn.addEventListener('click', async () => {
-    const fd = new FormData();
-    fd.append('action', 'end');
-    fd.append('site_id', String(getSiteId()));
-    fd.append('study_period', getCurrentStudyPeriod());
-    const res = await fetch('api/study_session.php', { method: 'POST', body: fd });
-    const data = await res.json();
-    statusEl.textContent = data.ok ? (data.message || 'Study ended.') : (data.error || 'Unable to end study.');
-    statusEl.className = data.ok ? 'status ok' : 'status warn';
-    await refreshEntryContext();
   });
 }
 

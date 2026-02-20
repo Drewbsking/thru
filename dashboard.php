@@ -86,11 +86,15 @@ async function loadDashboard() {
   const summary = json.summary;
   const policyStatus = summary.meets_policy ? 'Meets 25% Policy' : 'Below 25% Policy';
   const policyClass = summary.meets_policy ? 'ok' : 'warn';
+  const startTime = summary.start_time || '--';
+  const endTime = summary.end_time || '--';
   const avgCutThroughSpeed = json.matches.length
     ? (json.matches.reduce((acc, m) => acc + Number(m.avg_speed_mph || 0), 0) / json.matches.length).toFixed(2)
     : '0.00';
 
   document.getElementById('kpis').innerHTML = [
+    kpiCard('Start Time (First Entry)', startTime),
+    kpiCard('End Time (Last Entry)', endTime),
     kpiCard('Total (Two-Way)', summary.total_volume),
     kpiCard('Cut-Through Vehicles', summary.cut_through_count),
     kpiCard('Cut-Through %', `${summary.cut_through_percent}%`, policyClass),

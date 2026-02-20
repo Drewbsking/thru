@@ -69,6 +69,8 @@ foreach ($events as $event) {
 }
 
 $recent = array_reverse(array_slice($events, -50));
+$firstEventTime = count($events) > 0 ? (string)$events[0]['event_time'] : null;
+$lastEventTime = count($events) > 0 ? (string)$events[count($events) - 1]['event_time'] : null;
 
 json_response([
     'ok' => true,
@@ -84,6 +86,8 @@ json_response([
     ],
     'summary' => [
         'event_count' => count($events),
+        'start_time' => $firstEventTime,
+        'end_time' => $lastEventTime,
         'total_volume' => $analysis['total_volume'],
         'cut_through_count' => $analysis['cut_through_count'],
         'cut_through_percent' => $analysis['cut_through_percent'],
