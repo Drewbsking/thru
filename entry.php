@@ -30,6 +30,13 @@ render_head('Data Entry');
   <?php if ($site): ?>
     <p id="entryGreeting" class="status ok">You are recording at <?= h((string)$site['name']) ?>.</p>
   <?php endif; ?>
+  <p class="small" id="studyPeriodLabel">Current Study Period: --</p>
+  <p class="small" id="sessionStatusLabel">Study Session: --</p>
+  <p class="small" id="checkpointSummaryLabel">Checkpoint Summary: --</p>
+  <div class="actions" style="margin-top:0.3rem; margin-bottom:0.5rem;">
+    <button type="button" id="startStudyBtn">Start Study</button>
+    <button type="button" id="endStudyBtn" class="secondary">End Study</button>
+  </div>
   <p class="small">Checkpoint can be locked by link. This prevents wrong checkpoint tagging when different observers are logging traffic. Studies are typically short roadside sessions (around 2 hours).</p>
 
   <?php if (!$site): ?>
@@ -134,9 +141,21 @@ render_head('Data Entry');
       <div class="actions">
         <button type="submit">Save Event</button>
         <a class="btn secondary" href="dashboard.php">View Dashboard</a>
+        <label class="inline-radio" style="margin-left:0.4rem;">
+          <input type="checkbox" id="quickMode" checked> <span>Quick Save + Next</span>
+        </label>
       </div>
+      <p class="small">Hotkeys (laptop): <code class="inline">I/O</code> direction, <code class="inline">1-5</code> type, <code class="inline">6-0/-</code> color.</p>
       <p id="saveStatus" class="status small" style="margin-top:0.7rem;"></p>
     </form>
+
+    <div class="card" style="margin-top:0.6rem; padding:0.7rem;">
+      <h3 style="margin-bottom:0.45rem;">Last 5 Entries (This Checkpoint)</h3>
+      <table>
+        <thead><tr><th>Time</th><th>Dir</th><th>Plate</th><th>Type/Color</th><th>Action</th></tr></thead>
+        <tbody id="recentEntryBody"></tbody>
+      </table>
+    </div>
   <?php endif; ?>
 </section>
 
@@ -146,6 +165,7 @@ const initialSiteId = <?= (int)$siteId ?>;
 const initialCheckpointId = <?= (int)$checkpointId ?>;
 let collectorName = <?= json_encode($initialCollectorName, JSON_UNESCAPED_SLASHES) ?>;
 let currentCheckpoints = <?= json_encode($checkpoints, JSON_UNESCAPED_SLASHES) ?>;
+let pendingConfirmSignature = '';
 
 const siteInput = document.getElementById('site_id');
 const cpInput = document.getElementById('checkpoint_id');
@@ -159,6 +179,31 @@ const collectorDisplay = document.getElementById('collector_name_display');
 const greetingEl = document.getElementById('entryGreeting');
 const mapPanel = document.getElementById('mapPanel');
 const mapToggleBtn = document.getElementById('mapToggleBtn');
+const plateInput = document.getElementById('plate');
+const notesInput = document.getElementById('notes');
+const quickModeInput = document.getElementById('quickMode');
+const studyPeriodLabel = document.getElementById('studyPeriodLabel');
+const sessionStatusLabel = document.getElementById('sessionStatusLabel');
+const checkpointSummaryLabel = document.getElementById('checkpointSummaryLabel');
+const startStudyBtn = document.getElementById('startStudyBtn');
+const endStudyBtn = document.getElementById('endStudyBtn');
+const recentEntryBody = document.getElementById('recentEntryBody');
+
+function getSiteId() {
+  return Number(lockedCheckpoint ? initialSiteId : (siteInput ? siteInput.value : 0));
+}
+
+function getCheckpointId() {
+  return Number(lockedCheckpoint ? initialCheckpointId : (cpInput ? cpInput.value : 0));
+}
+
+function getCurrentStudyPeriod() {
+  return (new Date().getHours() < 12) ? 'morning' : 'afternoon';
+}
+
+function currentStudyPeriodLabel() {
+  return getCurrentStudyPeriod() === 'morning' ? 'Morning Study' : 'Afternoon Study';
+}
 
 function applyMapPanelState() {
   if (!mapPanel || !mapToggleBtn) return;
@@ -196,10 +241,58 @@ function toggleOtherColor() {
   otherColorWrap.style.display = selected === 'Other' ? 'grid' : 'none';
 }
 
+function notifySuccess() {
+  if (navigator.vibrate) {
+    navigator.vibrate(45);
+  }
+  try {
+    const AudioCtx = window.AudioContext || window.webkitAudioContext;
+    if (!AudioCtx) return;
+    const ctx = new AudioCtx();
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.type = 'sine';
+    osc.frequency.value = 880;
+    gain.gain.value = 0.05;
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.start();
+    osc.stop(ctx.currentTime + 0.07);
+  } catch (e) {
+    // Ignore audio failures on locked mobile browsers.
+  }
+}
+
+function hasAmbiguousPlate(plate) {
+  const p = (plate || '').toUpperCase();
+  return /[O01IL]/.test(p);
+}
+
+function currentEntrySignature() {
+  return [
+    getSiteId(),
+    getCheckpointId(),
+    selectedRadioValue('direction') || 'In',
+    (plateInput ? plateInput.value.trim().toUpperCase() : ''),
+    selectedRadioValue('vehicle_type'),
+    selectedVehicleColor().toUpperCase()
+  ].join('|');
+}
+
+function clearPendingConfirm() {
+  pendingConfirmSignature = '';
+}
+
 document.querySelectorAll('input[name="vehicle_color"]').forEach((input) => {
   input.addEventListener('change', toggleOtherColor);
+  input.addEventListener('change', clearPendingConfirm);
 });
 toggleOtherColor();
+document.querySelectorAll('input[name="vehicle_type"], input[name="direction"]').forEach((input) => {
+  input.addEventListener('change', clearPendingConfirm);
+});
+if (plateInput) plateInput.addEventListener('input', clearPendingConfirm);
+if (notesInput) notesInput.addEventListener('input', clearPendingConfirm);
 
 function syncCollectorForSelectedCheckpoint() {
   if (!cpInput) return;
@@ -220,6 +313,75 @@ function syncGreeting(selectedSiteName = null) {
     : `You are recording at ${siteName}.`;
 }
 
+async function loadSessionState() {
+  const siteId = getSiteId();
+  if (!siteId || !sessionStatusLabel) return;
+  const period = getCurrentStudyPeriod();
+  studyPeriodLabel.textContent = `Current Study Period: ${currentStudyPeriodLabel()}`;
+  const res = await fetch(`api/study_session.php?site_id=${siteId}&study_period=${period}`);
+  const data = await res.json();
+  if (!data.ok) {
+    sessionStatusLabel.textContent = 'Study Session: error loading status';
+    return;
+  }
+  if (data.active_session) {
+    sessionStatusLabel.textContent = `Study Session: Active (started ${data.active_session.started_at})`;
+    if (startStudyBtn) startStudyBtn.disabled = true;
+    if (endStudyBtn) endStudyBtn.disabled = false;
+  } else {
+    sessionStatusLabel.textContent = `Study Session: Not started (${currentStudyPeriodLabel()})`;
+    if (startStudyBtn) startStudyBtn.disabled = false;
+    if (endStudyBtn) endStudyBtn.disabled = true;
+  }
+}
+
+async function loadCheckpointSummary() {
+  const siteId = getSiteId();
+  const checkpointId = getCheckpointId();
+  if (!siteId || !checkpointId || !checkpointSummaryLabel) return;
+  const period = getCurrentStudyPeriod();
+  const res = await fetch(`api/dashboard_data.php?site_id=${siteId}&study_period=${period}`);
+  const data = await res.json();
+  if (!data.ok) {
+    checkpointSummaryLabel.textContent = 'Checkpoint Summary: unavailable';
+    return;
+  }
+  const row = (data.checkpoint_counts_by_id || []).find(r => Number(r.checkpoint_id) === checkpointId);
+  if (!row) {
+    checkpointSummaryLabel.textContent = `Checkpoint Summary (${currentStudyPeriodLabel()}): Total 0 (In 0 / Out 0)`;
+    return;
+  }
+  checkpointSummaryLabel.textContent = `Checkpoint Summary (${currentStudyPeriodLabel()}): Total ${row.total} (In ${row.in} / Out ${row.out})`;
+}
+
+async function loadRecentEntries() {
+  const siteId = getSiteId();
+  const checkpointId = getCheckpointId();
+  if (!siteId || !checkpointId || !recentEntryBody) return;
+
+  const res = await fetch(`api/recent_checkpoint_events.php?site_id=${siteId}&checkpoint_id=${checkpointId}&limit=5`);
+  const data = await res.json();
+  if (!data.ok) {
+    recentEntryBody.innerHTML = '<tr><td colspan=\"5\">Unable to load recent entries.</td></tr>';
+    return;
+  }
+  recentEntryBody.innerHTML = '';
+  for (const e of data.events) {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `<td>${e.event_time}</td><td>${e.direction}</td><td>${e.plate_raw || ''}</td><td>${e.vehicle_type}/${e.vehicle_color}</td><td><button type=\"button\" class=\"secondary\" data-edit=\"${e.id}\">Edit</button> <button type=\"button\" class=\"warn\" data-del=\"${e.id}\">Delete</button></td>`;
+    recentEntryBody.appendChild(tr);
+  }
+  if ((data.events || []).length === 0) {
+    recentEntryBody.innerHTML = '<tr><td colspan=\"5\">No entries yet.</td></tr>';
+  }
+}
+
+async function refreshEntryContext() {
+  await loadSessionState();
+  await loadCheckpointSummary();
+  await loadRecentEntries();
+}
+
 if (siteInput && cpInput && !lockedCheckpoint) {
   siteInput.addEventListener('change', async () => {
     const res = await fetch('api/site_context.php');
@@ -238,6 +400,7 @@ if (siteInput && cpInput && !lockedCheckpoint) {
     }
     syncCollectorForSelectedCheckpoint();
     syncGreeting(site.name || '');
+    await refreshEntryContext();
 
     if (sitePreview) {
       if (site.image_path) {
@@ -253,13 +416,112 @@ if (siteInput && cpInput && !lockedCheckpoint) {
 }
 
 if (cpInput) {
-  cpInput.addEventListener('change', () => {
+  cpInput.addEventListener('change', async () => {
     syncCollectorForSelectedCheckpoint();
     syncGreeting();
+    await refreshEntryContext();
   });
 }
 syncCollectorForSelectedCheckpoint();
 syncGreeting();
+refreshEntryContext();
+
+if (startStudyBtn) {
+  startStudyBtn.addEventListener('click', async () => {
+    const fd = new FormData();
+    fd.append('action', 'start');
+    fd.append('site_id', String(getSiteId()));
+    fd.append('study_period', getCurrentStudyPeriod());
+    const res = await fetch('api/study_session.php', { method: 'POST', body: fd });
+    const data = await res.json();
+    statusEl.textContent = data.ok ? (data.message || 'Study started.') : (data.error || 'Unable to start study.');
+    statusEl.className = data.ok ? 'status ok' : 'status warn';
+    await refreshEntryContext();
+  });
+}
+
+if (endStudyBtn) {
+  endStudyBtn.addEventListener('click', async () => {
+    const fd = new FormData();
+    fd.append('action', 'end');
+    fd.append('site_id', String(getSiteId()));
+    fd.append('study_period', getCurrentStudyPeriod());
+    const res = await fetch('api/study_session.php', { method: 'POST', body: fd });
+    const data = await res.json();
+    statusEl.textContent = data.ok ? (data.message || 'Study ended.') : (data.error || 'Unable to end study.');
+    statusEl.className = data.ok ? 'status ok' : 'status warn';
+    await refreshEntryContext();
+  });
+}
+
+if (recentEntryBody) {
+  recentEntryBody.addEventListener('click', async (e) => {
+    const target = e.target;
+    if (!(target instanceof HTMLElement)) return;
+    const eventId = Number(target.dataset.edit || target.dataset.del || 0);
+    if (!eventId) return;
+
+    if (target.dataset.del) {
+      if (!confirm('Delete this entry?')) return;
+      const fd = new FormData();
+      fd.append('action', 'delete');
+      fd.append('event_id', String(eventId));
+      fd.append('site_id', String(getSiteId()));
+      fd.append('checkpoint_id', String(getCheckpointId()));
+      const res = await fetch('api/entry_event_action.php', { method: 'POST', body: fd });
+      const data = await res.json();
+      statusEl.textContent = data.ok ? 'Entry deleted.' : (data.error || 'Delete failed.');
+      statusEl.className = data.ok ? 'status ok' : 'status warn';
+      await refreshEntryContext();
+      return;
+    }
+
+    if (target.dataset.edit) {
+      const plate = prompt('Edit plate (leave blank to keep):');
+      if (plate === null) return;
+      const notes = prompt('Edit comments (optional):', notesInput ? notesInput.value : '') ?? '';
+      const fd = new FormData();
+      fd.append('action', 'edit');
+      fd.append('event_id', String(eventId));
+      fd.append('site_id', String(getSiteId()));
+      fd.append('checkpoint_id', String(getCheckpointId()));
+      fd.append('plate_raw', plate);
+      fd.append('notes', notes);
+      const res = await fetch('api/entry_event_action.php', { method: 'POST', body: fd });
+      const data = await res.json();
+      statusEl.textContent = data.ok ? 'Entry updated.' : (data.error || 'Update failed.');
+      statusEl.className = data.ok ? 'status ok' : 'status warn';
+      await refreshEntryContext();
+    }
+  });
+}
+
+document.addEventListener('keydown', (e) => {
+  const tag = (e.target && e.target.tagName) ? e.target.tagName.toLowerCase() : '';
+  if (tag === 'input' || tag === 'textarea' || tag === 'select') return;
+
+  const key = e.key.toLowerCase();
+  if (key === 'i') {
+    document.querySelector('input[name=\"direction\"][value=\"In\"]')?.click();
+    return;
+  }
+  if (key === 'o') {
+    document.querySelector('input[name=\"direction\"][value=\"Out\"]')?.click();
+    return;
+  }
+
+  const typeMap = { '1': 'Sedan', '2': 'SUV', '3': 'Truck', '4': 'Minivan', '5': 'Trailer/Motorcycle' };
+  if (typeMap[key]) {
+    document.querySelector(`input[name=\"vehicle_type\"][value=\"${typeMap[key]}\"]`)?.click();
+    return;
+  }
+
+  const colorMap = { '6': 'White', '7': 'Black/Blue', '8': 'Gray/Silver', '9': 'Red', '0': 'Green', '-': 'Other' };
+  if (colorMap[key]) {
+    document.querySelector(`input[name=\"vehicle_color\"][value=\"${colorMap[key]}\"]`)?.click();
+    toggleOtherColor();
+  }
+});
 
 if (form) {
   form.addEventListener('submit', async (e) => {
@@ -283,6 +545,26 @@ if (form) {
     payload.append('observer_name', collectorName);
     payload.append('notes', document.getElementById('notes').value);
 
+    const signature = currentEntrySignature();
+    const plateValue = plateInput ? plateInput.value.trim() : '';
+    if (hasAmbiguousPlate(plateValue) && pendingConfirmSignature !== signature) {
+      pendingConfirmSignature = signature;
+      statusEl.textContent = 'Potential plate typo (O/0 or I/1/L). Press Save Event again to confirm.';
+      statusEl.className = 'status warn';
+      return;
+    }
+
+    if (pendingConfirmSignature !== signature) {
+      const dupRes = await fetch('api/check_duplicate.php', { method: 'POST', body: payload });
+      const dupJson = await dupRes.json();
+      if (dupJson.ok && dupJson.duplicate) {
+        pendingConfirmSignature = signature;
+        statusEl.textContent = `Possible duplicate near ${dupJson.latest?.event_time || 'just now'}. Press Save Event again to confirm.`;
+        statusEl.className = 'status warn';
+        return;
+      }
+    }
+
     const res = await fetch('api/submit_event.php', { method: 'POST', body: payload });
     const json = await res.json();
     if (!json.ok) {
@@ -293,12 +575,19 @@ if (form) {
 
     statusEl.textContent = `Saved event #${json.id}`;
     statusEl.className = 'status ok';
+    pendingConfirmSignature = '';
+    notifySuccess();
     document.getElementById('plate').value = '';
     document.getElementById('notes').value = '';
     if (otherColorInput) {
       otherColorInput.value = '';
     }
     toggleOtherColor();
+    if (quickModeInput && quickModeInput.checked && plateInput) {
+      plateInput.focus();
+      plateInput.select();
+    }
+    await refreshEntryContext();
   });
 }
 </script>

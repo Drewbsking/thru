@@ -53,6 +53,7 @@ function ensure_schema(): void
         id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
         site_id INT UNSIGNED NOT NULL,
         checkpoint_id INT UNSIGNED NOT NULL,
+        study_session_id BIGINT UNSIGNED NULL,
         direction ENUM('In', 'Out') NOT NULL,
         plate_raw VARCHAR(32) NULL,
         plate_norm VARCHAR(32) NULL,
@@ -65,8 +66,27 @@ function ensure_schema(): void
         KEY idx_event_time (event_time),
         KEY idx_site_time (site_id, event_time),
         KEY idx_plate_norm (plate_norm),
+        KEY idx_study_session_id (study_session_id),
         CONSTRAINT fk_event_site FOREIGN KEY (site_id) REFERENCES sites(id) ON DELETE CASCADE,
         CONSTRAINT fk_event_checkpoint FOREIGN KEY (checkpoint_id) REFERENCES checkpoints(id) ON DELETE CASCADE
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+
+    $sessionColRes = db()->query("SHOW COLUMNS FROM traffic_events LIKE 'study_session_id'");
+    if ($sessionColRes && $sessionColRes->num_rows === 0) {
+        db_exec("ALTER TABLE traffic_events ADD COLUMN study_session_id BIGINT UNSIGNED NULL AFTER checkpoint_id");
+        db_exec("ALTER TABLE traffic_events ADD KEY idx_study_session_id (study_session_id)");
+    }
+
+    db_exec("CREATE TABLE IF NOT EXISTS study_sessions (
+        id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+        site_id INT UNSIGNED NOT NULL,
+        study_period ENUM('morning', 'afternoon') NOT NULL,
+        status ENUM('active', 'ended') NOT NULL DEFAULT 'active',
+        started_at DATETIME NOT NULL,
+        ended_at DATETIME NULL,
+        created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        KEY idx_site_period_status (site_id, study_period, status),
+        CONSTRAINT fk_study_site FOREIGN KEY (site_id) REFERENCES sites(id) ON DELETE CASCADE
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
 
     seed_defaults();

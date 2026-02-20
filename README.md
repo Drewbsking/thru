@@ -20,6 +20,8 @@
 - Policy status is based on `cut_through_percent >= 25` (configurable in setup).
 - Dashboard and details filter by study period: `Morning Study` or `Afternoon Study` for the selected day.
 - Data collectors are assigned per checkpoint in Site Setup and auto-attached to event records in Data Entry.
+- Data Entry supports start/end study sessions by AM/PM period; new events are tagged to the active session.
+- Data Entry includes duplicate/ambiguous-plate warning prompts before final save.
 
 ## APIs
 - `api/submit_event.php`

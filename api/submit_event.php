@@ -25,6 +25,8 @@ if ($siteId <= 0 || $checkpointId <= 0 || $vehicleType === '' || $vehicleColor =
 $eventTime = date('Y-m-d H:i:s');
 
 $plateNorm = normalize_plate($plateRaw);
+$studySessionId = active_study_session_id($siteId);
+$studySessionIdParam = $studySessionId ?? 0;
 
 $checkStmt = db_prepare('SELECT c.id FROM checkpoints c INNER JOIN sites s ON s.id = c.site_id WHERE c.id = ? AND c.site_id = ? AND c.is_active = 1 AND s.is_active = 1 LIMIT 1');
 $checkStmt->bind_param('ii', $checkpointId, $siteId);
@@ -36,8 +38,8 @@ if (!$exists) {
     json_response(['ok' => false, 'error' => 'Invalid site/checkpoint.'], 422);
 }
 
-$insert = db_prepare('INSERT INTO traffic_events (site_id, checkpoint_id, direction, plate_raw, plate_norm, vehicle_type, vehicle_color, notes, observer_name, event_time) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)');
-$insert->bind_param('iissssssss', $siteId, $checkpointId, $direction, $plateRaw, $plateNorm, $vehicleType, $vehicleColor, $notes, $observer, $eventTime);
+$insert = db_prepare('INSERT INTO traffic_events (site_id, checkpoint_id, study_session_id, direction, plate_raw, plate_norm, vehicle_type, vehicle_color, notes, observer_name, event_time) VALUES (?, ?, NULLIF(?, 0), ?, ?, ?, ?, ?, ?, ?, ?)');
+$insert->bind_param('iiissssssss', $siteId, $checkpointId, $studySessionIdParam, $direction, $plateRaw, $plateNorm, $vehicleType, $vehicleColor, $notes, $observer, $eventTime);
 $ok = $insert->execute();
 $newId = $insert->insert_id;
 $insert->close();
@@ -46,4 +48,4 @@ if (!$ok) {
     json_response(['ok' => false, 'error' => 'Failed to save event.'], 500);
 }
 
-json_response(['ok' => true, 'id' => $newId]);
+json_response(['ok' => true, 'id' => $newId, 'event_time' => $eventTime, 'study_session_id' => $studySessionId]);

@@ -40,18 +40,32 @@ $distanceMap = distance_map_for_site($siteId);
 $analysis = classify_events($events, $distanceMap, $speedMph, $bufferMinutes, $minConfidence);
 
 $checkpointCounts = [];
+$checkpointCountsById = [];
 foreach ($events as $event) {
+    $cpId = (int)$event['checkpoint_id'];
     $cp = (string)$event['checkpoint_name'];
     if (!isset($checkpointCounts[$cp])) {
         $checkpointCounts[$cp] = ['in' => 0, 'out' => 0, 'total' => 0];
     }
+    if (!isset($checkpointCountsById[$cpId])) {
+        $checkpointCountsById[$cpId] = [
+            'checkpoint_id' => $cpId,
+            'checkpoint_name' => $cp,
+            'in' => 0,
+            'out' => 0,
+            'total' => 0,
+        ];
+    }
     $dir = strtolower((string)$event['direction']);
     if ($dir === 'in') {
         $checkpointCounts[$cp]['in']++;
+        $checkpointCountsById[$cpId]['in']++;
     } elseif ($dir === 'out') {
         $checkpointCounts[$cp]['out']++;
+        $checkpointCountsById[$cpId]['out']++;
     }
     $checkpointCounts[$cp]['total']++;
+    $checkpointCountsById[$cpId]['total']++;
 }
 
 $recent = array_reverse(array_slice($events, -50));
@@ -78,6 +92,7 @@ json_response([
         'local_departures_count' => count($analysis['unmatched_out']),
     ],
     'checkpoint_counts' => $checkpointCounts,
+    'checkpoint_counts_by_id' => array_values($checkpointCountsById),
     'matches' => $analysis['matches'],
     'unmatched_in' => $analysis['unmatched_in'],
     'unmatched_out' => $analysis['unmatched_out'],
