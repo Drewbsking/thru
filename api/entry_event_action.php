@@ -27,13 +27,26 @@ if ($action === 'delete') {
 }
 
 if ($action === 'edit') {
+    $direction = (($_POST['direction'] ?? 'In') === 'Out') ? 'Out' : 'In';
     $plate = trim((string)($_POST['plate_raw'] ?? ''));
+    $vehicleType = trim((string)($_POST['vehicle_type'] ?? ''));
+    $vehicleColor = trim((string)($_POST['vehicle_color'] ?? ''));
     $notes = trim((string)($_POST['notes'] ?? ''));
+
+    $allowedTypes = ['Sedan', 'SUV', 'Truck', 'Minivan', 'Trailer/Motorcycle'];
+    $allowedColors = ['White', 'Black/Blue', 'Gray/Silver', 'Red', 'Green', 'Other'];
+    if (!in_array($vehicleType, $allowedTypes, true)) {
+        json_response(['ok' => false, 'error' => 'Invalid vehicle type.'], 422);
+    }
+    if (!in_array($vehicleColor, $allowedColors, true)) {
+        json_response(['ok' => false, 'error' => 'Invalid vehicle color.'], 422);
+    }
+
     $plate = normalize_plate($plate);
     $plateNorm = $plate;
 
-    $stmt = db_prepare('UPDATE traffic_events SET plate_raw = ?, plate_norm = ?, notes = ? WHERE id = ? AND site_id = ? AND checkpoint_id = ?');
-    $stmt->bind_param('sssiii', $plate, $plateNorm, $notes, $eventId, $siteId, $checkpointId);
+    $stmt = db_prepare('UPDATE traffic_events SET direction = ?, plate_raw = ?, plate_norm = ?, vehicle_type = ?, vehicle_color = ?, notes = ? WHERE id = ? AND site_id = ? AND checkpoint_id = ?');
+    $stmt->bind_param('ssssssiii', $direction, $plate, $plateNorm, $vehicleType, $vehicleColor, $notes, $eventId, $siteId, $checkpointId);
     $stmt->execute();
     $affected = $stmt->affected_rows;
     $stmt->close();

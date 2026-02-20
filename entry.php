@@ -122,7 +122,7 @@ render_head('Data Entry');
       </div>
       <div id="recentEntriesPanel" style="display:none; margin-top:0.45rem;">
         <table>
-          <thead><tr><th>Event #</th><th>Time</th><th>Dir</th><th>Plate</th><th>Type/Color</th><th>Action</th></tr></thead>
+          <thead><tr><th>Event #</th><th>Time</th><th>Dir</th><th>Plate</th><th>Type</th><th>Color</th><th>Comments</th><th>Action</th></tr></thead>
           <tbody id="recentEntryBody"></tbody>
         </table>
       </div>
@@ -151,6 +151,8 @@ const checkpointSummaryLabel = document.getElementById('checkpointSummaryLabel')
 const recentEntriesToggle = document.getElementById('recentEntriesToggle');
 const recentEntriesPanel = document.getElementById('recentEntriesPanel');
 const recentEntryBody = document.getElementById('recentEntryBody');
+const vehicleTypeOptions = ['Sedan', 'SUV', 'Truck', 'Minivan', 'Trailer/Motorcycle'];
+const vehicleColorOptions = ['White', 'Black/Blue', 'Gray/Silver', 'Red', 'Green', 'Other'];
 
 function forceUppercaseInput(el) {
   if (!el) return;
@@ -197,6 +199,15 @@ function selectedRadioValue(name) {
 
 function selectedVehicleColor() {
   return selectedRadioValue('vehicle_color');
+}
+
+function escapeHtml(value) {
+  return String(value ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
 }
 
 function notifySuccess() {
@@ -290,24 +301,77 @@ async function loadRecentEntries() {
   const checkpointId = getCheckpointId();
   if (!recentEntryBody) return;
   if (!siteId || !checkpointId) {
-    recentEntryBody.innerHTML = '<tr><td colspan=\"5\">Select a valid checkpoint to view entries.</td></tr>';
+    recentEntryBody.innerHTML = '<tr><td colspan=\"8\">Select a valid checkpoint to view entries.</td></tr>';
     return;
   }
 
   const res = await fetch(`api/recent_checkpoint_events.php?site_id=${siteId}&checkpoint_id=${checkpointId}&limit=6`);
   const data = await res.json();
   if (!data.ok) {
-    recentEntryBody.innerHTML = '<tr><td colspan=\"6\">Unable to load recent entries.</td></tr>';
+    recentEntryBody.innerHTML = '<tr><td colspan=\"8\">Unable to load recent entries.</td></tr>';
     return;
   }
   recentEntryBody.innerHTML = '';
   for (const e of data.events) {
+    const typeOptions = vehicleTypeOptions.map((opt) => `<option value="${escapeHtml(opt)}"${opt === e.vehicle_type ? ' selected' : ''}>${escapeHtml(opt)}</option>`).join('');
+    const colorOptions = vehicleColorOptions.map((opt) => `<option value="${escapeHtml(opt)}"${opt === e.vehicle_color ? ' selected' : ''}>${escapeHtml(opt)}</option>`).join('');
     const tr = document.createElement('tr');
-    tr.innerHTML = `<td>${e.id}</td><td>${e.event_time}</td><td>${e.direction}</td><td>${e.plate_raw || ''}</td><td>${e.vehicle_type}/${e.vehicle_color}</td><td><button type=\"button\" class=\"secondary\" data-edit=\"${e.id}\">Edit</button> <button type=\"button\" class=\"warn\" data-del=\"${e.id}\">Delete</button></td>`;
+    tr.innerHTML = `<td>${e.id}</td>
+      <td>${escapeHtml(e.event_time)}</td>
+      <td data-field=\"direction\">${escapeHtml(e.direction)}</td>
+      <td data-field=\"plate_raw\">${escapeHtml(e.plate_raw || '')}</td>
+      <td data-field=\"vehicle_type\">${escapeHtml(e.vehicle_type)}</td>
+      <td data-field=\"vehicle_color\">${escapeHtml(e.vehicle_color)}</td>
+      <td data-field=\"notes\">${escapeHtml(e.notes || '')}</td>
+      <td>
+        <button type=\"button\" class=\"secondary\" data-edit=\"${e.id}\">Edit</button>
+        <button type=\"button\" class=\"warn\" data-del=\"${e.id}\">Delete</button>
+      </td>`;
+    tr.dataset.eventId = String(e.id);
+    tr.dataset.editing = 'false';
+    tr.dataset.direction = String(e.direction || 'In');
+    tr.dataset.plateRaw = String(e.plate_raw || '');
+    tr.dataset.vehicleType = String(e.vehicle_type || 'Sedan');
+    tr.dataset.vehicleColor = String(e.vehicle_color || 'White');
+    tr.dataset.notes = String(e.notes || '');
+    tr.dataset.typeOptions = typeOptions;
+    tr.dataset.colorOptions = colorOptions;
     recentEntryBody.appendChild(tr);
   }
   if ((data.events || []).length === 0) {
-    recentEntryBody.innerHTML = '<tr><td colspan=\"6\">No entries yet.</td></tr>';
+    recentEntryBody.innerHTML = '<tr><td colspan=\"8\">No entries yet.</td></tr>';
+  }
+}
+
+function enterRecentEditMode(tr) {
+  if (!tr || tr.dataset.editing === 'true') return;
+  tr.dataset.editing = 'true';
+  tr.querySelector('[data-field="direction"]').innerHTML = `
+    <select data-input="direction">
+      <option value="In"${tr.dataset.direction === 'In' ? ' selected' : ''}>In</option>
+      <option value="Out"${tr.dataset.direction === 'Out' ? ' selected' : ''}>Out</option>
+    </select>`;
+  tr.querySelector('[data-field="plate_raw"]').innerHTML = `<input data-input="plate_raw" maxlength="32" value="${escapeHtml(tr.dataset.plateRaw || '')}" style="text-transform:uppercase;" autocapitalize="characters" spellcheck="false">`;
+  tr.querySelector('[data-field="vehicle_type"]').innerHTML = `<select data-input="vehicle_type">${tr.dataset.typeOptions || ''}</select>`;
+  tr.querySelector('[data-field="vehicle_color"]').innerHTML = `<select data-input="vehicle_color">${tr.dataset.colorOptions || ''}</select>`;
+  tr.querySelector('[data-field="notes"]').innerHTML = `<input data-input="notes" maxlength="255" value="${escapeHtml(tr.dataset.notes || '')}" style="text-transform:uppercase;" autocapitalize="characters">`;
+  const actionCell = tr.lastElementChild;
+  if (actionCell) {
+    actionCell.innerHTML = `<button type="button" data-save="${tr.dataset.eventId}">Save</button> <button type="button" class="secondary" data-cancel="${tr.dataset.eventId}">Cancel</button>`;
+  }
+}
+
+function exitRecentEditMode(tr) {
+  if (!tr) return;
+  tr.dataset.editing = 'false';
+  tr.querySelector('[data-field="direction"]').textContent = tr.dataset.direction || '';
+  tr.querySelector('[data-field="plate_raw"]').textContent = tr.dataset.plateRaw || '';
+  tr.querySelector('[data-field="vehicle_type"]').textContent = tr.dataset.vehicleType || '';
+  tr.querySelector('[data-field="vehicle_color"]').textContent = tr.dataset.vehicleColor || '';
+  tr.querySelector('[data-field="notes"]').textContent = tr.dataset.notes || '';
+  const actionCell = tr.lastElementChild;
+  if (actionCell) {
+    actionCell.innerHTML = `<button type="button" class="secondary" data-edit="${tr.dataset.eventId}">Edit</button> <button type="button" class="warn" data-del="${tr.dataset.eventId}">Delete</button>`;
   }
 }
 
@@ -370,8 +434,10 @@ if (recentEntryBody) {
   recentEntryBody.addEventListener('click', async (e) => {
     const target = e.target;
     if (!(target instanceof HTMLElement)) return;
-    const eventId = Number(target.dataset.edit || target.dataset.del || 0);
+    const eventId = Number(target.dataset.edit || target.dataset.del || target.dataset.save || target.dataset.cancel || 0);
     if (!eventId) return;
+    const tr = target.closest('tr');
+    if (!tr) return;
 
     if (target.dataset.del) {
       if (!confirm('Delete this entry?')) return;
@@ -389,21 +455,59 @@ if (recentEntryBody) {
     }
 
     if (target.dataset.edit) {
-      const plate = prompt('Edit plate (leave blank to keep):');
-      if (plate === null) return;
-      const notes = prompt('Edit comments (optional):', notesInput ? notesInput.value : '') ?? '';
+      enterRecentEditMode(tr);
+      const plateEditInput = tr.querySelector('[data-input="plate_raw"]');
+      if (plateEditInput instanceof HTMLInputElement) {
+        plateEditInput.focus();
+        plateEditInput.select();
+      }
+      return;
+    }
+
+    if (target.dataset.cancel) {
+      exitRecentEditMode(tr);
+      return;
+    }
+
+    if (target.dataset.save) {
+      const direction = (tr.querySelector('[data-input="direction"]')?.value || 'In') === 'Out' ? 'Out' : 'In';
+      const plate = (tr.querySelector('[data-input="plate_raw"]')?.value || '').toUpperCase();
+      const vehicleType = tr.querySelector('[data-input="vehicle_type"]')?.value || '';
+      const vehicleColor = tr.querySelector('[data-input="vehicle_color"]')?.value || '';
+      const notes = (tr.querySelector('[data-input="notes"]')?.value || '').toUpperCase();
+
+      if (!vehicleType || !vehicleColor) {
+        statusEl.textContent = 'Type and color are required.';
+        statusEl.className = 'status warn';
+        return;
+      }
+
       const fd = new FormData();
       fd.append('action', 'edit');
       fd.append('event_id', String(eventId));
       fd.append('site_id', String(getSiteId()));
       fd.append('checkpoint_id', String(getCheckpointId()));
+      fd.append('direction', direction);
       fd.append('plate_raw', plate);
+      fd.append('vehicle_type', vehicleType);
+      fd.append('vehicle_color', vehicleColor);
       fd.append('notes', notes);
       const res = await fetch('api/entry_event_action.php', { method: 'POST', body: fd });
       const data = await res.json();
-      statusEl.textContent = data.ok ? 'Entry updated.' : (data.error || 'Update failed.');
-      statusEl.className = data.ok ? 'status ok' : 'status warn';
-      await refreshEntryContext();
+      if (!data.ok) {
+        statusEl.textContent = data.error || 'Update failed.';
+        statusEl.className = 'status warn';
+        return;
+      }
+      tr.dataset.direction = direction;
+      tr.dataset.plateRaw = plate;
+      tr.dataset.vehicleType = vehicleType;
+      tr.dataset.vehicleColor = vehicleColor;
+      tr.dataset.notes = notes;
+      exitRecentEditMode(tr);
+      statusEl.textContent = 'Entry updated.';
+      statusEl.className = 'status ok';
+      await loadCheckpointSummary();
     }
   });
 }
