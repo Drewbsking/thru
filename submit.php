@@ -1,56 +1,72 @@
 <?php
-ini_set('display_errors', 1);  // Enable error reporting for debugging
-ini_set('display_startup_errors', 1);
-error_reporting(E_ALL);
 
-// Database connection details
-$servername = "localhost";  // Use "localhost" since it's on the same server
-$username = "rcocwiki_thru";   // Replace with your MySQL username
-$password = "Password#110";    // Replace with your MySQL password
-$dbname = "rcocwiki_thru";     // Your database name
+declare(strict_types=1);
 
-// Create connection
-$conn = new mysqli($servername, $username, $password, $dbname);
+require_once __DIR__ . '/lib/bootstrap.php';
+require_once __DIR__ . '/lib/utils.php';
 
-// Check connection
-if ($conn->connect_error) {
-    die("Connection failed: " . $conn->connect_error);
+ensure_schema();
+
+if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+    http_response_code(405);
+    echo 'Method not allowed';
+    exit;
 }
 
-// Process POST request data
-if ($_SERVER["REQUEST_METHOD"] == "POST") {
-    $plate = $_POST['plate'];
-    $location = $_POST['location'];
-    $vehicle_type = $_POST['vehicle_type'];
-    $vehicle_color = $_POST['vehicle_color'];
-    $in_out = $_POST['in_out']; // Retrieve the 'In/Out' field
-    $comments = $_POST['comments'];
-
-    // Determine the correct table based on the location parameter
-    $table = "";
-    if ($location == "Site 1") {
-        $table = "site1_vehicle_data";
-    } elseif ($location == "Site 2") {
-        $table = "site2_vehicle_data";
-    } elseif ($location == "Site 3") {
-        $table = "site3_vehicle_data";
-    }
-
-    // Insert data into the appropriate table
-    if ($table != "") {
-        $sql = "INSERT INTO $table (plate, location, vehicle_type, vehicle_color, in_out, comments)
-                VALUES ('$plate', '$location', '$vehicle_type', '$vehicle_color', '$in_out', '$comments')";
-
-        if ($conn->query($sql) === TRUE) {
-            echo "New record created successfully";
-        } else {
-            echo "Error: " . $conn->error;
-        }
-    } else {
-        echo "Invalid location parameter!";
-    }
+$siteId = current_site_id();
+if ($siteId <= 0) {
+    http_response_code(422);
+    echo 'No active site configured';
+    exit;
 }
 
-// Close the database connection
-$conn->close();
-?>
+$location = trim((string)($_POST['location'] ?? ''));
+$vehicleType = trim((string)($_POST['vehicle_type'] ?? ''));
+$vehicleColor = trim((string)($_POST['vehicle_color'] ?? ''));
+$direction = ($_POST['in_out'] ?? '') === 'Out' ? 'Out' : 'In';
+$plate = trim((string)($_POST['plate'] ?? ''));
+$notes = trim((string)($_POST['comments'] ?? ''));
+
+if ($vehicleType === '' || $vehicleColor === '') {
+    http_response_code(422);
+    echo 'Missing required fields';
+    exit;
+}
+
+$codeMap = [
+    'Site 1' => 'CP1',
+    'Site 2' => 'CP2',
+    'Site 3' => 'CP3',
+];
+$targetCode = $codeMap[$location] ?? '';
+
+$cpStmt = $targetCode !== ''
+    ? db_prepare('SELECT id FROM checkpoints WHERE site_id = ? AND checkpoint_code = ? LIMIT 1')
+    : db_prepare('SELECT id FROM checkpoints WHERE site_id = ? ORDER BY id ASC LIMIT 1');
+
+if ($targetCode !== '') {
+    $cpStmt->bind_param('is', $siteId, $targetCode);
+} else {
+    $cpStmt->bind_param('i', $siteId);
+}
+$cpStmt->execute();
+$cp = $cpStmt->get_result()?->fetch_assoc();
+$cpStmt->close();
+
+$checkpointId = (int)($cp['id'] ?? 0);
+if ($checkpointId <= 0) {
+    http_response_code(422);
+    echo 'No checkpoint found';
+    exit;
+}
+
+$plateNorm = normalize_plate($plate);
+$now = date('Y-m-d H:i:s');
+
+$insert = db_prepare('INSERT INTO traffic_events (site_id, checkpoint_id, direction, plate_raw, plate_norm, vehicle_type, vehicle_color, notes, observer_name, event_time) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)');
+$observer = '';
+$insert->bind_param('iissssssss', $siteId, $checkpointId, $direction, $plate, $plateNorm, $vehicleType, $vehicleColor, $notes, $observer, $now);
+$ok = $insert->execute();
+$insert->close();
+
+echo $ok ? 'New record created successfully' : 'Error saving record';

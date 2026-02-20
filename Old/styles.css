@@ -1,0 +1,91 @@
+/* General Body Styling */
+body {
+    font-family: Arial, sans-serif;
+    margin: 0;
+    padding: 20px;
+    background-color: #f7f9fc;
+    max-width: 600px;
+    margin: auto;
+}
+
+/* Form Styling */
+form {
+    background-color: #ffffff;
+    padding: 20px;
+    border-radius: 10px;
+    box-shadow: 0 0 20px rgba(0, 0, 0, 0.1);
+    margin-top: 20px;
+}
+
+/* Form Header */
+h1 {
+    font-size: 18px;
+    text-align: center;
+    margin-bottom: 20px;
+}
+
+/* Label and Input Fields */
+label {
+    font-size: 16px;
+    margin-bottom: 5px;
+    display: block;
+}
+
+input, textarea, select {
+    width: calc(100% - 20px);
+    padding: 10px;
+    margin-bottom: 10px;
+    border: 1px solid #d1d1d1;
+    border-radius: 5px;
+    font-size: 14px;
+}
+
+/* Radio Button Styling */
+.radio-group label {
+    display: inline-block;
+    margin-right: 15px;
+    font-size: 14px;
+}
+
+.radio-group input[type="radio"] {
+    width: auto;
+    margin-right: 5px;
+}
+
+/* Submit Button Styling */
+input[type="submit"] {
+    background-color: #007bff;
+    color: white;
+    cursor: pointer;
+    border: none;
+    font-size: 16px;
+    padding: 10px;
+    border-radius: 5px;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+input[type="submit"]:hover {
+    background-color: #0056b3;
+}
+
+/* Confirmation Message */
+.confirmation {
+    margin-top: 20px;
+    font-size: 18px;
+    color: green;
+    text-align: center;
+    display: none;
+}
+
+/* Styling for the Dashboard Link */
+.dashboard-link {
+    font-size: 14px;
+    color: #007bff;
+    margin-left: 10px;
+    text-decoration: none;
+}
+
+.dashboard-link:hover {
+    text-decoration: underline;
+}

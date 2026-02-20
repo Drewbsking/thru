@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>License Plate Study Form</title>
+    <!-- Link to External CSS -->
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <h1>
+    License Plate Study Form - <span id="siteLabel">Site</span>
+    <a href="http://thru.rcocwiki.org/dashboard.html" class="dashboard-link" target="_blank">View Dashboard</a>
+    </h1>
+    <form id="licenseForm" action="submit.php" method="post">
+        <label for="plate">License Plate Number (First 3 characters):</label>
+        <input type="text" id="plate" name="plate" required>
+
+        <!-- Hidden Location Field (Automatically Set Based on URL Parameter) -->
+        <input type="hidden" id="location" name="location" required>
+
+        <!-- Vehicle Type Selection Using Radio Buttons -->
+        <label>Vehicle Type:</label>
+        <div class="radio-group">
+            <input type="radio" id="sedan" name="vehicle_type" value="Sedan" required>
+            <label for="sedan">Sedan</label>
+            <input type="radio" id="suv" name="vehicle_type" value="SUV">
+            <label for="suv">SUV</label>
+            <input type="radio" id="truck" name="vehicle_type" value="Truck">
+            <label for="truck">Truck</label>
+            <input type="radio" id="minivan" name="vehicle_type" value="Minivan">
+            <label for="minivan">Minivan</label>
+            <input type="radio" id="trailer_motorcycle" name="vehicle_type" value="Trailer/Motorcycle">
+            <label for="trailer_motorcycle">Trailer/Motorcycle</label>
+        </div>
+
+        <!-- Vehicle Color Selection Using Radio Buttons -->
+        <label>Vehicle Color:</label>
+        <div class="radio-group">
+            <input type="radio" id="white" name="vehicle_color" value="White" required>
+            <label for="white">White</label>
+            <input type="radio" id="black_blue" name="vehicle_color" value="Black/Blue">
+            <label for="black_blue">Black/Blue</label>
+            <input type="radio" id="gray_silver" name="vehicle_color" value="Gray/Silver">
+            <label for="gray_silver">Gray/Silver</label>
+            <input type="radio" id="red" name="vehicle_color" value="Red">
+            <label for="red">Red</label>
+            <input type="radio" id="green" name="vehicle_color" value="Green">
+            <label for="green">Green</label>
+            <input type="radio" id="other" name="vehicle_color" value="Other">
+            <label for="other">Other</label>
+        </div>
+
+        <!-- In/Out Selection Using Radio Buttons -->
+        <label>Vehicle In/Out:</label>
+        <div class="radio-group">
+            <input type="radio" id="in" name="in_out" value="In" required>
+            <label for="in">In</label>
+            <input type="radio" id="out" name="in_out" value="Out">
+            <label for="out">Out</label>
+        </div>
+
+        <label for="comments">Comments (Optional):</label>
+        <textarea id="comments" name="comments" rows="3" placeholder="Any other details"></textarea>
+
+        <input type="submit" value="Submit">
+    </form>
+
+    <!-- Confirmation Message -->
+    <div class="confirmation" id="confirmation">Data successfully saved!</div>
+
+    <!-- Link to External JS -->
+    <script src="script.js"></script>
+</body>
+</html>
