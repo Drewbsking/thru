@@ -4,14 +4,18 @@ declare(strict_types=1);
 
 require_once __DIR__ . '/_bootstrap.php';
 
-$method = $_SERVER['REQUEST_METHOD'] ?? 'GET';
-if ($method === 'GET') {
-    get_session_state();
+try {
+    $method = $_SERVER['REQUEST_METHOD'] ?? 'GET';
+    if ($method === 'GET') {
+        get_session_state();
+    }
+    if ($method === 'POST') {
+        post_session_action();
+    }
+    json_response(['ok' => false, 'error' => 'Method not allowed'], 405);
+} catch (Throwable $e) {
+    json_response(['ok' => false, 'error' => 'Study session service error.'], 500);
 }
-if ($method === 'POST') {
-    post_session_action();
-}
-json_response(['ok' => false, 'error' => 'Method not allowed'], 405);
 
 function post_session_action(): void
 {
@@ -30,8 +34,9 @@ function post_session_action(): void
         }
 
         $now = date('Y-m-d H:i:s');
-        $stmt = db_prepare('INSERT INTO study_sessions (site_id, study_period, status, started_at) VALUES (?, ?, \"active\", ?)');
-        $stmt->bind_param('iss', $siteId, $studyPeriod, $now);
+        $status = 'active';
+        $stmt = db_prepare('INSERT INTO study_sessions (site_id, study_period, status, started_at) VALUES (?, ?, ?, ?)');
+        $stmt->bind_param('isss', $siteId, $studyPeriod, $status, $now);
         $stmt->execute();
         $id = (int)$stmt->insert_id;
         $stmt->close();
@@ -48,8 +53,9 @@ function post_session_action(): void
 
         $now = date('Y-m-d H:i:s');
         $id = (int)$active['id'];
-        $stmt = db_prepare('UPDATE study_sessions SET status = \"ended\", ended_at = ? WHERE id = ?');
-        $stmt->bind_param('si', $now, $id);
+        $endedStatus = 'ended';
+        $stmt = db_prepare('UPDATE study_sessions SET status = ?, ended_at = ? WHERE id = ?');
+        $stmt->bind_param('ssi', $endedStatus, $now, $id);
         $stmt->execute();
         $stmt->close();
 
@@ -85,8 +91,9 @@ function normalize_period(string $period): string
 
 function find_active_session(int $siteId, string $studyPeriod): ?array
 {
-    $stmt = db_prepare('SELECT id, site_id, study_period, status, started_at, ended_at FROM study_sessions WHERE site_id = ? AND study_period = ? AND status = \"active\" ORDER BY id DESC LIMIT 1');
-    $stmt->bind_param('is', $siteId, $studyPeriod);
+    $activeStatus = 'active';
+    $stmt = db_prepare('SELECT id, site_id, study_period, status, started_at, ended_at FROM study_sessions WHERE site_id = ? AND study_period = ? AND status = ? ORDER BY id DESC LIMIT 1');
+    $stmt->bind_param('iss', $siteId, $studyPeriod, $activeStatus);
     $stmt->execute();
     $row = $stmt->get_result()?->fetch_assoc();
     $stmt->close();

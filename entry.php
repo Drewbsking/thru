@@ -135,9 +135,6 @@ render_head('Data Entry');
       <div class="actions">
         <button type="submit">Save Event</button>
         <a class="btn secondary" href="dashboard.php">View Dashboard</a>
-        <label class="inline-radio" style="margin-left:0.4rem;">
-          <input type="checkbox" id="quickMode" checked> <span>Quick Save + Next</span>
-        </label>
       </div>
       <p class="small">Hotkeys (laptop): <code class="inline">I/O</code> direction, <code class="inline">1-5</code> type, <code class="inline">6-0/-</code> color.</p>
       <p id="saveStatus" class="status small" style="margin-top:0.7rem;"></p>
@@ -173,7 +170,6 @@ const mapPanel = document.getElementById('mapPanel');
 const mapToggleBtn = document.getElementById('mapToggleBtn');
 const plateInput = document.getElementById('plate');
 const notesInput = document.getElementById('notes');
-const quickModeInput = document.getElementById('quickMode');
 const studyPeriodLabel = document.getElementById('studyPeriodLabel');
 const sessionStatusLabel = document.getElementById('sessionStatusLabel');
 const checkpointSummaryLabel = document.getElementById('checkpointSummaryLabel');
@@ -318,9 +314,19 @@ async function loadSessionState() {
   const period = getCurrentStudyPeriod();
   studyPeriodLabel.textContent = `Current Study Period: ${currentStudyPeriodLabel()}`;
   const res = await fetch(`api/study_session.php?site_id=${siteId}&study_period=${period}`);
-  const data = await res.json();
+  let data = null;
+  try {
+    data = await res.json();
+  } catch (e) {
+    sessionStatusLabel.textContent = `Study Session: service error (${res.status})`;
+    if (startStudyBtn) startStudyBtn.disabled = false;
+    if (endStudyBtn) endStudyBtn.disabled = true;
+    return;
+  }
   if (!data.ok) {
     sessionStatusLabel.textContent = 'Study Session: error loading status';
+    if (startStudyBtn) startStudyBtn.disabled = false;
+    if (endStudyBtn) endStudyBtn.disabled = true;
     return;
   }
   if (data.active_session) {
@@ -573,7 +579,7 @@ if (form) {
     notifySuccess();
     document.getElementById('plate').value = '';
     document.getElementById('notes').value = '';
-    if (quickModeInput && quickModeInput.checked && plateInput) {
+    if (plateInput) {
       plateInput.focus();
       plateInput.select();
     }
