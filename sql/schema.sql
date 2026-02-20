@@ -16,6 +16,7 @@ CREATE TABLE IF NOT EXISTS checkpoints (
   site_id INT UNSIGNED NOT NULL,
   checkpoint_code VARCHAR(32) NOT NULL,
   display_name VARCHAR(120) NOT NULL,
+  collector_name VARCHAR(80) NULL,
   checkpoint_type ENUM('Entrance', 'Exit', 'Both') NOT NULL DEFAULT 'Both',
   is_active TINYINT(1) NOT NULL DEFAULT 1,
   created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,

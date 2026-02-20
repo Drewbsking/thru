@@ -6,13 +6,11 @@ require_once __DIR__ . '/lib/layout.php';
 
 $siteId = (int)($_GET['site_id'] ?? current_site_id());
 $sites = all_sites();
-$collectorName = app_setting('data_collector_name', '');
 render_head('Dashboard');
 ?>
 <section class="card">
   <h1>N-CAT Dashboard</h1>
   <p class="small">Auto-refreshes every <span id="pollLabel">10</span> seconds. Cut-through is calculated with expected travel time from checkpoint distance and speed setting.</p>
-  <p class="small">Data Collector: <strong id="collectorLabel"><?= h($collectorName !== '' ? $collectorName : 'Not set in Site Setup') ?></strong></p>
   <div class="form-row">
     <div>
       <label>Site</label>
@@ -80,7 +78,6 @@ async function loadDashboard() {
 
   pollMs = Math.max(5000, Number(json.settings.poll_seconds || 10) * 1000);
   document.getElementById('pollLabel').textContent = String(pollMs / 1000);
-  document.getElementById('collectorLabel').textContent = json.settings.data_collector_name || 'Not set in Site Setup';
 
   const summary = json.summary;
   const policyStatus = summary.meets_policy ? 'Meets 25% Policy' : 'Below 25% Policy';

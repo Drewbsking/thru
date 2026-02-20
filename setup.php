@@ -25,7 +25,6 @@ render_head('Site Setup');
       </div>
       <div class="form-row">
         <div><label>Policy Cut-Through %</label><input id="policy_cut_through_percent" type="number" min="1" max="100" step="1"></div>
-        <div><label>Data Collector Name</label><input id="data_collector_name" maxlength="80" placeholder="Collector name"></div>
       </div>
       <button type="submit">Save Settings</button>
       <p id="settingsStatus" class="status small"></p>
@@ -83,13 +82,14 @@ render_head('Site Setup');
       <div class="form-row">
         <div><label>Checkpoint Code</label><input id="checkpoint_code" placeholder="CP1"></div>
         <div><label>Display Name</label><input id="display_name" placeholder="Checkpoint 1"></div>
+        <div><label>Data Collector</label><input id="collector_name" maxlength="80" placeholder="Collector assigned to this checkpoint"></div>
         <div><label>Type</label><select id="checkpoint_type"><option>Both</option><option>Entrance</option><option>Exit</option></select></div>
       </div>
       <button type="submit">Save Checkpoint</button>
       <p id="cpStatus" class="status small"></p>
     </form>
     <table>
-      <thead><tr><th>Code</th><th>Name</th><th>Type</th><th>Action</th></tr></thead>
+      <thead><tr><th>Code</th><th>Name</th><th>Collector</th><th>Type</th><th>Action</th></tr></thead>
       <tbody id="cpBody"></tbody>
     </table>
   </article>
@@ -150,7 +150,7 @@ function renderCheckpoints() {
   cpBody.innerHTML = '';
   cps.forEach(cp => {
     const tr = document.createElement('tr');
-    tr.innerHTML = `<td>${cp.checkpoint_code}</td><td>${cp.display_name}</td><td>${cp.checkpoint_type}</td>
+    tr.innerHTML = `<td>${cp.checkpoint_code}</td><td>${cp.display_name}</td><td>${cp.collector_name || ''}</td><td>${cp.checkpoint_type}</td>
       <td><button type="button" class="secondary" data-edit="${cp.id}">Edit</button> <button type="button" class="warn" data-del="${cp.id}">Delete</button></td>`;
     cpBody.appendChild(tr);
   });
@@ -169,7 +169,7 @@ function renderCheckpoints() {
 
 function renderSettings() {
   const s = context.settings;
-  for (const k of ['speed_mph','buffer_minutes','min_confidence','poll_seconds','policy_cut_through_percent','data_collector_name']) {
+  for (const k of ['speed_mph','buffer_minutes','min_confidence','poll_seconds','policy_cut_through_percent']) {
     document.getElementById(k).value = s[k];
   }
 }
@@ -235,7 +235,6 @@ document.getElementById('settingsForm').addEventListener('submit', async (e) => 
     min_confidence: document.getElementById('min_confidence').value,
     poll_seconds: document.getElementById('poll_seconds').value,
     policy_cut_through_percent: document.getElementById('policy_cut_through_percent').value,
-    data_collector_name: document.getElementById('data_collector_name').value,
   };
   const out = await post('save_settings', payload);
   document.getElementById('settingsStatus').textContent = out.ok ? 'Settings saved. Dashboard recalculation uses these values immediately.' : out.error;
@@ -297,6 +296,7 @@ document.getElementById('checkpointForm').addEventListener('submit', async (e) =
     checkpoint_id: document.getElementById('checkpoint_id').value,
     checkpoint_code: document.getElementById('checkpoint_code').value,
     display_name: document.getElementById('display_name').value,
+    collector_name: document.getElementById('collector_name').value,
     checkpoint_type: document.getElementById('checkpoint_type').value,
   });
   document.getElementById('cpStatus').textContent = out.ok ? 'Checkpoint saved.' : out.error;
@@ -305,6 +305,7 @@ document.getElementById('checkpointForm').addEventListener('submit', async (e) =
     document.getElementById('checkpoint_id').value = '0';
     document.getElementById('checkpoint_code').value = '';
     document.getElementById('display_name').value = '';
+    document.getElementById('collector_name').value = '';
     document.getElementById('checkpoint_type').value = 'Both';
   }
   await loadContext();
@@ -322,6 +323,7 @@ document.getElementById('cpBody').addEventListener('click', async (e) => {
     document.getElementById('checkpoint_id').value = cp.id;
     document.getElementById('checkpoint_code').value = cp.checkpoint_code;
     document.getElementById('display_name').value = cp.display_name;
+    document.getElementById('collector_name').value = cp.collector_name || '';
     document.getElementById('checkpoint_type').value = cp.checkpoint_type;
   }
 

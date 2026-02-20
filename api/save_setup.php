@@ -50,14 +50,12 @@ function save_settings(): void
     $confidence = (string)max(50, min(100, (int)($_POST['min_confidence'] ?? 70)));
     $poll = (string)max(5, min(60, (int)($_POST['poll_seconds'] ?? 10)));
     $policy = (string)max(1, min(100, (float)($_POST['policy_cut_through_percent'] ?? 25)));
-    $collector = trim((string)($_POST['data_collector_name'] ?? ''));
 
     set_app_setting('speed_mph', $speed);
     set_app_setting('buffer_minutes', $buffer);
     set_app_setting('min_confidence', $confidence);
     set_app_setting('poll_seconds', $poll);
     set_app_setting('policy_cut_through_percent', $policy);
-    set_app_setting('data_collector_name', $collector);
 
     json_response(['ok' => true]);
 }
@@ -116,6 +114,7 @@ function save_checkpoint(): void
     $checkpointId = (int)($_POST['checkpoint_id'] ?? 0);
     $code = strtoupper(trim((string)($_POST['checkpoint_code'] ?? '')));
     $name = trim((string)($_POST['display_name'] ?? ''));
+    $collectorName = trim((string)($_POST['collector_name'] ?? ''));
     $type = (string)($_POST['checkpoint_type'] ?? 'Both');
     if (!in_array($type, ['Entrance', 'Exit', 'Both'], true)) {
         $type = 'Both';
@@ -126,13 +125,13 @@ function save_checkpoint(): void
     }
 
     if ($checkpointId > 0) {
-        $stmt = db_prepare('UPDATE checkpoints SET checkpoint_code = ?, display_name = ?, checkpoint_type = ? WHERE id = ? AND site_id = ?');
-        $stmt->bind_param('sssii', $code, $name, $type, $checkpointId, $siteId);
+        $stmt = db_prepare('UPDATE checkpoints SET checkpoint_code = ?, display_name = ?, collector_name = ?, checkpoint_type = ? WHERE id = ? AND site_id = ?');
+        $stmt->bind_param('ssssii', $code, $name, $collectorName, $type, $checkpointId, $siteId);
         $stmt->execute();
         $stmt->close();
     } else {
-        $stmt = db_prepare('INSERT INTO checkpoints (site_id, checkpoint_code, display_name, checkpoint_type, is_active) VALUES (?, ?, ?, ?, 1)');
-        $stmt->bind_param('isss', $siteId, $code, $name, $type);
+        $stmt = db_prepare('INSERT INTO checkpoints (site_id, checkpoint_code, display_name, collector_name, checkpoint_type, is_active) VALUES (?, ?, ?, ?, ?, 1)');
+        $stmt->bind_param('issss', $siteId, $code, $name, $collectorName, $type);
         $stmt->execute();
         $checkpointId = $stmt->insert_id;
         $stmt->close();

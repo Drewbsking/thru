@@ -16,21 +16,13 @@ $vehicleType = trim((string)($_POST['vehicle_type'] ?? ''));
 $vehicleColor = trim((string)($_POST['vehicle_color'] ?? ''));
 $notes = trim((string)($_POST['notes'] ?? ''));
 $observer = trim((string)($_POST['observer_name'] ?? ''));
-$eventTime = trim((string)($_POST['event_time'] ?? ''));
 
 if ($siteId <= 0 || $checkpointId <= 0 || $vehicleType === '' || $vehicleColor === '') {
     json_response(['ok' => false, 'error' => 'Missing required fields.'], 422);
 }
 
-if ($eventTime === '') {
-    $eventTime = date('Y-m-d H:i:s');
-} else {
-    $parsed = strtotime($eventTime);
-    if ($parsed === false) {
-        json_response(['ok' => false, 'error' => 'Invalid event time.'], 422);
-    }
-    $eventTime = date('Y-m-d H:i:s', $parsed);
-}
+// Event time is always server-side save timestamp.
+$eventTime = date('Y-m-d H:i:s');
 
 $plateNorm = normalize_plate($plateRaw);
 

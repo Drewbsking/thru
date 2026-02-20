@@ -158,6 +158,61 @@ code.inline {
   color: #fff;
 }
 
+.entry-compact .small {
+  margin-bottom: 0.45rem;
+}
+
+.entry-compact .form-row {
+  gap: 0.5rem;
+  margin-bottom: 0.45rem;
+}
+
+.entry-compact .choice-block {
+  margin-bottom: 0.55rem;
+}
+
+.entry-compact .choice-title {
+  margin-bottom: 0.2rem;
+}
+
+.inline-radio-group {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem 1rem;
+}
+
+.inline-radio {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  margin: 0;
+  font-size: 0.95rem;
+  font-weight: 500;
+}
+
+.inline-radio input {
+  width: auto;
+  margin: 0;
+}
+
+.entry-compact textarea {
+  min-height: 72px;
+}
+
+.site-map-panel {
+  margin-top: 0.4rem;
+}
+
+@media (max-width: 700px) {
+  .site-map-panel {
+    display: none;
+  }
+
+  .site-map-panel.open {
+    display: block;
+  }
+}
+
 @media (max-width: 390px) {
   .page {
     padding: 0 0.55rem;
@@ -173,5 +228,9 @@ code.inline {
 
   .radio-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .inline-radio-group {
+    gap: 0.25rem 0.7rem;
   }
 }

@@ -73,7 +73,7 @@ function site_by_id(int $siteId): ?array
 
 function checkpoints_for_site(int $siteId): array
 {
-    $stmt = db_prepare('SELECT id, checkpoint_code, display_name, checkpoint_type, is_active FROM checkpoints WHERE site_id = ? ORDER BY checkpoint_code ASC');
+    $stmt = db_prepare('SELECT id, checkpoint_code, display_name, collector_name, checkpoint_type, is_active FROM checkpoints WHERE site_id = ? ORDER BY checkpoint_code ASC');
     $stmt->bind_param('i', $siteId);
     $stmt->execute();
     $rows = $stmt->get_result()?->fetch_all(MYSQLI_ASSOC) ?: [];

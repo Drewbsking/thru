@@ -21,6 +21,5 @@ json_response([
         'min_confidence' => (int)app_setting('min_confidence', '70'),
         'poll_seconds' => (int)app_setting('poll_seconds', '10'),
         'policy_cut_through_percent' => (float)app_setting('policy_cut_through_percent', '25'),
-        'data_collector_name' => app_setting('data_collector_name', ''),
     ],
 ]);

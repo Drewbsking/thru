@@ -24,12 +24,18 @@ function ensure_schema(): void
         site_id INT UNSIGNED NOT NULL,
         checkpoint_code VARCHAR(32) NOT NULL,
         display_name VARCHAR(120) NOT NULL,
+        collector_name VARCHAR(80) NULL,
         checkpoint_type ENUM('Entrance', 'Exit', 'Both') NOT NULL DEFAULT 'Both',
         is_active TINYINT(1) NOT NULL DEFAULT 1,
         created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
         UNIQUE KEY uniq_site_code (site_id, checkpoint_code),
         CONSTRAINT fk_checkpoint_site FOREIGN KEY (site_id) REFERENCES sites(id) ON DELETE CASCADE
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+
+    $colRes = db()->query("SHOW COLUMNS FROM checkpoints LIKE 'collector_name'");
+    if ($colRes && $colRes->num_rows === 0) {
+        db_exec("ALTER TABLE checkpoints ADD COLUMN collector_name VARCHAR(80) NULL AFTER display_name");
+    }
 
     db_exec("CREATE TABLE IF NOT EXISTS checkpoint_distances (
         id INT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
@@ -77,7 +83,6 @@ function seed_defaults(): void
         'min_confidence' => '70',
         'poll_seconds' => '10',
         'policy_cut_through_percent' => '25',
-        'data_collector_name' => '',
         'auth_password_hash' => $initialHash,
     ];
 
@@ -97,7 +102,7 @@ function seed_defaults(): void
     db_exec("INSERT INTO sites (name, is_active) VALUES ('Primary Study Site', 1)");
     $siteId = (int)db()->insert_id;
 
-    $cpStmt = db_prepare('INSERT INTO checkpoints (site_id, checkpoint_code, display_name, checkpoint_type, is_active) VALUES (?, ?, ?, ?, 1)');
+    $cpStmt = db_prepare('INSERT INTO checkpoints (site_id, checkpoint_code, display_name, collector_name, checkpoint_type, is_active) VALUES (?, ?, ?, NULL, ?, 1)');
     $entries = [
         [$siteId, 'CP1', 'Checkpoint 1', 'Both'],
         [$siteId, 'CP2', 'Checkpoint 2', 'Both'],
