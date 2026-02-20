@@ -116,6 +116,7 @@ render_head('Site Setup');
 <script>
 let context = null;
 let distances = [];
+const setupSiteStorageKey = 'ncat_setup_selected_site_id';
 
 async function post(action, extra = {}, file = null) {
   const fd = new FormData();
@@ -130,7 +131,15 @@ function selectedSiteId() {
   return Number(document.getElementById('sitePicker').value || 0);
 }
 
-function refreshSitePicker() {
+function getStoredSiteId() {
+  return Number(localStorage.getItem(setupSiteStorageKey) || 0);
+}
+
+function storeSiteId(siteId) {
+  localStorage.setItem(setupSiteStorageKey, String(siteId || 0));
+}
+
+function refreshSitePicker(preferredSiteId = 0) {
   const picker = document.getElementById('sitePicker');
   picker.innerHTML = '';
   for (const s of context.sites) {
@@ -139,7 +148,14 @@ function refreshSitePicker() {
     o.textContent = `${s.name}${Number(s.id) === Number(context.active_site_id) ? ' (Active)' : ''}`;
     picker.appendChild(o);
   }
-  picker.value = String(context.active_site_id || context.sites[0]?.id || '');
+
+  const validIds = new Set(context.sites.map(s => Number(s.id)));
+  const chosen = validIds.has(Number(preferredSiteId))
+    ? Number(preferredSiteId)
+    : (validIds.has(Number(context.active_site_id)) ? Number(context.active_site_id) : Number(context.sites[0]?.id || 0));
+
+  picker.value = String(chosen || '');
+  storeSiteId(chosen);
 }
 
 function renderCheckpoints() {
@@ -206,6 +222,10 @@ function renderDistances() {
 }
 
 async function loadContext() {
+  const currentSelected = selectedSiteId();
+  const storedSelected = getStoredSiteId();
+  const preferredSiteId = currentSelected || storedSelected;
+
   const res = await fetch('api/site_context.php');
   context = await res.json();
   if (!context.ok) return;
@@ -214,7 +234,7 @@ async function loadContext() {
   const dJson = await dRes.json();
   distances = dJson.distances || [];
 
-  refreshSitePicker();
+  refreshSitePicker(preferredSiteId);
   renderSettings();
   renderCheckpoints();
   renderSiteImage();
@@ -222,6 +242,7 @@ async function loadContext() {
 }
 
 document.getElementById('sitePicker').addEventListener('change', () => {
+  storeSiteId(selectedSiteId());
   renderCheckpoints();
   renderSiteImage();
   renderDistances();
@@ -270,6 +291,7 @@ document.getElementById('newSiteForm').addEventListener('submit', async (e) => {
   document.getElementById('siteStatus').textContent = out.ok ? `Site created (#${out.site_id}).` : out.error;
   document.getElementById('siteStatus').className = out.ok ? 'status ok' : 'status warn';
   if (out.ok) document.getElementById('site_name').value = '';
+  if (out.ok && out.site_id) storeSiteId(Number(out.site_id));
   await loadContext();
 });
 

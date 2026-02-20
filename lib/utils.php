@@ -91,8 +91,16 @@ function distance_map_for_site(int $siteId): array
 
     $map = [];
     foreach ($rows as $row) {
-        $k = $row['from_checkpoint_id'] . ':' . $row['to_checkpoint_id'];
-        $map[$k] = (float)$row['distance_miles'];
+        $from = (int)$row['from_checkpoint_id'];
+        $to = (int)$row['to_checkpoint_id'];
+        $dist = (float)$row['distance_miles'];
+        $forwardKey = $from . ':' . $to;
+        $reverseKey = $to . ':' . $from;
+        $map[$forwardKey] = $dist;
+        // Treat distances as bidirectional by default unless explicitly overridden.
+        if (!isset($map[$reverseKey])) {
+            $map[$reverseKey] = $dist;
+        }
     }
     return $map;
 }

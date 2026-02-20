@@ -56,6 +56,10 @@ render_head('Cut-Through Details');
 <script>
 let matchesCache = [];
 
+function currentStudyPeriod() {
+  return (new Date().getHours() < 12) ? 'morning' : 'afternoon';
+}
+
 function csvEscape(v) {
   const s = String(v ?? '');
   return `"${s.replaceAll('"', '""')}"`;
@@ -132,6 +136,7 @@ async function loadDetails() {
 document.getElementById('site_id').addEventListener('change', loadDetails);
 document.getElementById('study_period').addEventListener('change', loadDetails);
 document.getElementById('exportBtn').addEventListener('click', exportCsv);
+document.getElementById('study_period').value = currentStudyPeriod();
 loadDetails();
 </script>
 <?php render_foot(); ?>

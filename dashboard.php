@@ -65,6 +65,10 @@ render_head('Dashboard');
 let pollMs = 10000;
 let timer;
 
+function currentStudyPeriod() {
+  return (new Date().getHours() < 12) ? 'morning' : 'afternoon';
+}
+
 function kpiCard(label, value, css='') {
   return `<article class="card"><div class="kpi ${css}">${value}</div><div class="kpi-label">${label}</div></article>`;
 }
@@ -132,6 +136,7 @@ async function loadDashboard() {
 document.getElementById('refreshBtn').addEventListener('click', loadDashboard);
 document.getElementById('site_id').addEventListener('change', loadDashboard);
 document.getElementById('study_period').addEventListener('change', loadDashboard);
+document.getElementById('study_period').value = currentStudyPeriod();
 loadDashboard();
 </script>
 <?php render_foot(); ?>
