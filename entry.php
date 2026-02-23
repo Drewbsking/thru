@@ -133,8 +133,12 @@ render_head('Data Entry');
             <span><span class="vehicle-icon">🚐</span><span class="vehicle-name">Minivan</span></span>
           </label>
           <label class="radio-chip vehicle-type-chip">
-            <input type="radio" name="vehicle_type" value="Trailer/Motorcycle">
-            <span><span class="vehicle-icon">🏍️</span><span class="vehicle-name">Trailer/Motorcycle</span></span>
+            <input type="radio" name="vehicle_type" value="Trailer">
+            <span><span class="vehicle-icon">🚛</span><span class="vehicle-name">Trailer</span></span>
+          </label>
+          <label class="radio-chip vehicle-type-chip">
+            <input type="radio" name="vehicle_type" value="Motorcycle">
+            <span><span class="vehicle-icon">🏍️</span><span class="vehicle-name">Motorcycle</span></span>
           </label>
         </div>
       </div>
@@ -223,7 +227,7 @@ const checkpointSummaryLabel = document.getElementById('checkpointSummaryLabel')
 const recentEntriesToggle = document.getElementById('recentEntriesToggle');
 const recentEntriesPanel = document.getElementById('recentEntriesPanel');
 const recentEntryBody = document.getElementById('recentEntryBody');
-const vehicleTypeOptions = ['Sedan', 'SUV', 'Truck', 'Minivan', 'Trailer/Motorcycle'];
+const vehicleTypeOptions = ['Sedan', 'SUV', 'Truck', 'Minivan', 'Trailer', 'Motorcycle', 'Trailer/Motorcycle'];
 const vehicleColorOptions = ['White', 'Black/Blue', 'Gray/Silver', 'Red', 'Green', 'Other'];
 
 function forceUppercaseInput(el) {

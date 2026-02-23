@@ -100,7 +100,7 @@ SELECT
     SUBSTRING('ABCDEFGHJKLMNPRSTUVWXYZ', 1 + MOD(base.n * 11, 22), 1),
     SUBSTRING('0123456789', 1 + MOD(base.n * 13, 10), 1)
   ) AS plate_raw,
-  ELT(1 + MOD(base.n + 1, 5), 'Sedan', 'SUV', 'Truck', 'Minivan', 'Trailer/Motorcycle') AS vehicle_type,
+  ELT(1 + MOD(base.n + 1, 6), 'Sedan', 'SUV', 'Truck', 'Minivan', 'Trailer', 'Motorcycle') AS vehicle_type,
   ELT(1 + MOD(base.n - 1, 6), 'White', 'Black/Blue', 'Gray/Silver', 'Red', 'Green', 'Other') AS vehicle_color,
   ELT(1 + MOD(base.n - 1, 4), 'Alex', 'Blair', 'Casey', 'Drew') AS observer_in,
   ELT(1 + MOD(base.n + 1, 4), 'Alex', 'Blair', 'Casey', 'Drew') AS observer_out,
@@ -199,7 +199,7 @@ SELECT
   END AS checkpoint_id,
   IF(n <= 12, 'In', 'Out') AS direction,
   CONCAT('ZZ', LPAD(n, 2, '0')) AS plate_raw,
-  ELT(1 + MOD(n + 2, 5), 'Sedan', 'SUV', 'Truck', 'Minivan', 'Trailer/Motorcycle') AS vehicle_type,
+  ELT(1 + MOD(n + 2, 6), 'Sedan', 'SUV', 'Truck', 'Minivan', 'Trailer', 'Motorcycle') AS vehicle_type,
   ELT(1 + MOD(n + 2, 6), 'White', 'Black/Blue', 'Gray/Silver', 'Red', 'Green', 'Other') AS vehicle_color,
   ELT(1 + MOD(n, 4), 'Alex', 'Blair', 'Casey', 'Drew') AS observer_name,
   TIMESTAMP(

@@ -21,6 +21,14 @@ $userId = current_user_id();
 if ($siteId <= 0 || $checkpointId <= 0 || $vehicleType === '' || $vehicleColor === '') {
     json_response(['ok' => false, 'error' => 'Missing required fields.'], 422);
 }
+$allowedTypes = ['Sedan', 'SUV', 'Truck', 'Minivan', 'Trailer', 'Motorcycle', 'Trailer/Motorcycle'];
+$allowedColors = ['White', 'Black/Blue', 'Gray/Silver', 'Red', 'Green', 'Other'];
+if (!in_array($vehicleType, $allowedTypes, true)) {
+    json_response(['ok' => false, 'error' => 'Invalid vehicle type.'], 422);
+}
+if (!in_array($vehicleColor, $allowedColors, true)) {
+    json_response(['ok' => false, 'error' => 'Invalid vehicle color.'], 422);
+}
 if (!can_access_checkpoint($siteId, $checkpointId)) {
     json_response(['ok' => false, 'error' => 'Not authorized for this checkpoint.'], 403);
 }
