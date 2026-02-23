@@ -57,12 +57,19 @@ render_head('Data Entry');
 <section class="card entry-compact">
   <h1>Data Entry</h1>
   <?php if ($site): ?>
-    <p id="entryGreeting" class="status ok">Welcome, <?= h($initialCollectorName !== '' ? $initialCollectorName : 'Collector') ?>. You are logged in.</p>
-    <p class="small" id="entryContextLabel">Site: <?= h((string)$site['name']) ?> | Checkpoint: <?= h($selectedCheckpointLabel !== '' ? $selectedCheckpointLabel : '--') ?></p>
+    <div class="entry-meta-toggle">
+      <button type="button" id="entryMetaToggle" class="secondary" aria-expanded="true" aria-controls="entryMetaPanel">Hide Study Info</button>
+    </div>
   <?php endif; ?>
-  <p class="small">All times use Eastern Time (ET).</p>
-  <p class="small" id="studyPeriodLabel">Current Study Period: --</p>
-  <p class="small" id="checkpointSummaryLabel">Checkpoint Summary: --</p>
+  <div id="entryMetaPanel" class="entry-meta-panel">
+    <?php if ($site): ?>
+      <p id="entryGreeting" class="status ok">Welcome, <?= h($initialCollectorName !== '' ? $initialCollectorName : 'Collector') ?>. You are logged in.</p>
+      <p class="small" id="entryContextLabel">Site: <?= h((string)$site['name']) ?> | Checkpoint: <?= h($selectedCheckpointLabel !== '' ? $selectedCheckpointLabel : '--') ?></p>
+    <?php endif; ?>
+    <p class="small">All times use Eastern Time (ET).</p>
+    <p class="small" id="studyPeriodLabel">Current Study Period: --</p>
+    <p class="small" id="checkpointSummaryLabel">Checkpoint Summary: --</p>
+  </div>
 
   <?php if (!$site): ?>
     <p class="status warn"><?= $isAdmin ? 'No active site found. Configure a site first in Site Setup.' : 'No checkpoint assignment found for your account. Ask an admin to assign your checkpoint.' ?></p>
@@ -230,6 +237,8 @@ const checkpointSummaryLabel = document.getElementById('checkpointSummaryLabel')
 const recentEntriesToggle = document.getElementById('recentEntriesToggle');
 const recentEntriesPanel = document.getElementById('recentEntriesPanel');
 const recentEntryBody = document.getElementById('recentEntryBody');
+const entryMetaToggle = document.getElementById('entryMetaToggle');
+const entryMetaPanel = document.getElementById('entryMetaPanel');
 const vehicleTypeOptions = ['Sedan', 'SUV', 'Pickup Truck', 'Truck', 'Minivan', 'Motorcycle', 'Other', 'Trailer', 'Trailer/Motorcycle'];
 const vehicleColorOptions = ['White', 'Black/Blue', 'Gray/Silver', 'Red', 'Green', 'Other'];
 
@@ -349,6 +358,25 @@ function currentEntrySignature() {
 
 function clearPendingConfirm() {
   pendingConfirmSignature = '';
+}
+
+function setEntryMetaExpanded(expanded) {
+  if (!entryMetaToggle || !entryMetaPanel) return;
+  if (expanded) {
+    entryMetaPanel.removeAttribute('hidden');
+  } else {
+    entryMetaPanel.setAttribute('hidden', 'hidden');
+  }
+  entryMetaToggle.setAttribute('aria-expanded', expanded ? 'true' : 'false');
+  entryMetaToggle.textContent = expanded ? 'Hide Study Info' : 'Show Study Info';
+}
+
+if (entryMetaToggle && entryMetaPanel) {
+  const isSmallScreen = window.matchMedia('(max-width: 700px)').matches;
+  setEntryMetaExpanded(!isSmallScreen);
+  entryMetaToggle.addEventListener('click', () => {
+    setEntryMetaExpanded(entryMetaPanel.hasAttribute('hidden'));
+  });
 }
 
 document.querySelectorAll('input[name="vehicle_color"]').forEach((input) => {

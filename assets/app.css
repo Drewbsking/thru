@@ -239,6 +239,19 @@ code.inline {
   margin-bottom: 0.2rem;
 }
 
+.entry-meta-toggle {
+  margin-bottom: 0.4rem;
+}
+
+.entry-meta-toggle .secondary {
+  padding: 0.35rem 0.65rem;
+  font-size: 0.78rem;
+}
+
+.entry-meta-panel {
+  margin-bottom: 0.5rem;
+}
+
 .inline-radio-group {
   display: flex;
   flex-wrap: wrap;
