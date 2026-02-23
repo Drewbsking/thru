@@ -30,7 +30,7 @@ render_head('Dashboard');
     </div>
     <div>
       <label>&nbsp;</label>
-      <button id="downloadReportBtn" type="button" class="secondary">Download Formal PDF (AM+PM)</button>
+      <button id="downloadReportBtn" type="button" class="secondary">Download PDF Report (AM+PM)</button>
     </div>
   </div>
   <div class="card" style="margin-top:0.75rem; padding:0.75rem;">
@@ -417,7 +417,7 @@ function addAutoTable(pdf, config) {
 async function downloadFormalReportPdf() {
   if (!activeSiteId || reportBusy) return;
   reportBusy = true;
-  const originalText = downloadReportBtn ? downloadReportBtn.textContent : 'Download Formal PDF (AM+PM)';
+  const originalText = downloadReportBtn ? downloadReportBtn.textContent : 'Download PDF Report (AM+PM)';
   if (downloadReportBtn) {
     downloadReportBtn.disabled = true;
     downloadReportBtn.textContent = 'Building PDF...';

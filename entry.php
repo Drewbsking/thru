@@ -110,11 +110,11 @@ render_head('Data Entry');
       <div class="choice-block">
         <div class="choice-title">Vehicle Type</div>
         <div class="inline-radio-group">
-          <label class="inline-radio"><input type="radio" name="vehicle_type" value="Sedan" checked> <span>Sedan</span></label>
-          <label class="inline-radio"><input type="radio" name="vehicle_type" value="SUV"> <span>SUV</span></label>
-          <label class="inline-radio"><input type="radio" name="vehicle_type" value="Truck"> <span>Truck</span></label>
-          <label class="inline-radio"><input type="radio" name="vehicle_type" value="Minivan"> <span>Minivan</span></label>
-          <label class="inline-radio"><input type="radio" name="vehicle_type" value="Trailer/Motorcycle"> <span>Trailer/Motorcycle</span></label>
+          <label class="inline-radio"><input type="radio" name="vehicle_type" value="Sedan" checked> <span>🚗 Sedan</span></label>
+          <label class="inline-radio"><input type="radio" name="vehicle_type" value="SUV"> <span>🚙 SUV</span></label>
+          <label class="inline-radio"><input type="radio" name="vehicle_type" value="Truck"> <span>🛻 Truck</span></label>
+          <label class="inline-radio"><input type="radio" name="vehicle_type" value="Minivan"> <span>🚐 Minivan</span></label>
+          <label class="inline-radio"><input type="radio" name="vehicle_type" value="Trailer/Motorcycle"> <span>🏍️ Trailer/Motorcycle</span></label>
         </div>
       </div>
 
