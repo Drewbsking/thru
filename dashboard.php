@@ -84,6 +84,39 @@ function kpiCard(label, value, css='') {
   return `<article class="card"><div class="kpi ${css}">${value}</div><div class="kpi-label">${label}</div></article>`;
 }
 
+function matchRouteKey(match) {
+  const inCode = match?.in_event?.checkpoint_code || match?.in_event?.checkpoint_name || 'In';
+  const outCode = match?.out_event?.checkpoint_code || match?.out_event?.checkpoint_name || 'Out';
+  return `${inCode} -> ${outCode}`;
+}
+
+function groupMatchesByRoute(matches) {
+  const grouped = new Map();
+  for (const match of (matches || [])) {
+    const key = matchRouteKey(match);
+    if (!grouped.has(key)) grouped.set(key, []);
+    grouped.get(key).push(match);
+  }
+  return Array.from(grouped.entries()).sort((a, b) => a[0].localeCompare(b[0], undefined, { numeric: true, sensitivity: 'base' }));
+}
+
+function formatKpiDateTime(value) {
+  const raw = String(value || '').trim();
+  if (!raw) return '--';
+  const dt = new Date(raw.replace(' ', 'T'));
+  if (Number.isNaN(dt.getTime())) return raw;
+  const datePart = new Intl.DateTimeFormat('en-US', {
+    month: 'long',
+    day: 'numeric',
+    year: 'numeric'
+  }).format(dt);
+  const timePart = new Intl.DateTimeFormat('en-US', {
+    hour: 'numeric',
+    minute: '2-digit'
+  }).format(dt);
+  return `${datePart}, ${timePart}`;
+}
+
 async function loadDashboard() {
   if (!activeSiteId || !studyPeriodSelect) return;
   const studyPeriod = studyPeriodSelect.value;
@@ -97,8 +130,8 @@ async function loadDashboard() {
   const summary = json.summary;
   const policyStatus = summary.meets_policy ? 'Meets 25% Policy' : 'Below 25% Policy';
   const policyClass = summary.meets_policy ? 'ok' : 'warn';
-  const startTime = summary.start_time || '--';
-  const endTime = summary.end_time || '--';
+  const startTime = formatKpiDateTime(summary.start_time);
+  const endTime = formatKpiDateTime(summary.end_time);
   const avgCutThroughSpeed = json.matches.length
     ? (json.matches.reduce((acc, m) => acc + Number(m.avg_speed_mph || 0), 0) / json.matches.length).toFixed(2)
     : '0.00';
@@ -125,18 +158,29 @@ async function loadDashboard() {
 
   const matchBody = document.getElementById('matchBody');
   matchBody.innerHTML = '';
-  json.matches.slice(0, 20).forEach(m => {
-    const tr = document.createElement('tr');
-    tr.innerHTML = `<td>${m.in_event.id}</td>
-      <td>${m.out_event.id}</td>
-      <td>${m.in_event.checkpoint_name} ${m.in_event.event_time}</td>
-      <td>${m.out_event.checkpoint_name} ${m.out_event.event_time}</td>
-      <td>${m.elapsed_minutes} min</td>
-      <td>${m.expected_minutes} min</td>
-      <td>${m.avg_speed_mph} mph</td>
-      <td>${m.confidence}</td>`;
-    matchBody.appendChild(tr);
-  });
+  const routeGroups = groupMatchesByRoute(json.matches || []);
+  if (routeGroups.length === 0) {
+    matchBody.innerHTML = '<tr><td colspan="8">No cut-through matches in this period.</td></tr>';
+  } else {
+    for (const [route, matches] of routeGroups) {
+      const section = document.createElement('tr');
+      section.innerHTML = `<td colspan="8" style="background:#eef2ff; font-weight:700;">${route} (${matches.length})</td>`;
+      matchBody.appendChild(section);
+
+      matches.forEach((m) => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `<td>${m.in_event.id}</td>
+          <td>${m.out_event.id}</td>
+          <td>${m.in_event.checkpoint_name} ${m.in_event.event_time}</td>
+          <td>${m.out_event.checkpoint_name} ${m.out_event.event_time}</td>
+          <td>${m.elapsed_minutes} min</td>
+          <td>${m.expected_minutes} min</td>
+          <td>${m.avg_speed_mph} mph</td>
+          <td>${m.confidence}</td>`;
+        matchBody.appendChild(tr);
+      });
+    }
+  }
 
   const recentBody = document.getElementById('recentBody');
   recentBody.innerHTML = '';

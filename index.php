@@ -30,6 +30,11 @@ render_head('Home');
     <article class="card">
       <h2><?= h($site['name']) ?><?= (int)$site['id'] === $activeId ? ' (Active)' : '' ?></h2>
       <p class="small">Site ID <?= (int)$site['id'] ?>. Use checkpoint links below for locked data entry.</p>
+      <?php if (!empty($site['image_path'])): ?>
+        <img class="site-preview" src="<?= h((string)$site['image_path']) ?>" alt="<?= h((string)$site['name']) ?> site image" style="max-height:220px;">
+      <?php else: ?>
+        <p class="small">No site image uploaded for this site yet.</p>
+      <?php endif; ?>
       <div class="small" style="margin-top:0.6rem;">Checkpoint Quick Links:</div>
       <div class="actions">
       <?php foreach (($site['checkpoints'] ?? []) as $cp): ?>

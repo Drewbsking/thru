@@ -65,6 +65,22 @@ function csvEscape(v) {
   return `"${s.replaceAll('"', '""')}"`;
 }
 
+function matchRouteKey(match) {
+  const inCode = match?.in_event?.checkpoint_code || match?.in_event?.checkpoint_name || 'In';
+  const outCode = match?.out_event?.checkpoint_code || match?.out_event?.checkpoint_name || 'Out';
+  return `${inCode} -> ${outCode}`;
+}
+
+function groupMatchesByRoute(matches) {
+  const grouped = new Map();
+  for (const match of (matches || [])) {
+    const key = matchRouteKey(match);
+    if (!grouped.has(key)) grouped.set(key, []);
+    grouped.get(key).push(match);
+  }
+  return Array.from(grouped.entries()).sort((a, b) => a[0].localeCompare(b[0], undefined, { numeric: true, sensitivity: 'base' }));
+}
+
 function exportCsv() {
   const rows = [['in_event_id','out_event_id','in_time','in_checkpoint','out_time','out_checkpoint','distance_miles','elapsed_minutes','expected_minutes','avg_speed_mph','confidence','plate_in','plate_out','vehicle_type','vehicle_color']];
   for (const m of matchesCache) {
@@ -106,13 +122,24 @@ async function loadDetails() {
 
   const matchBody = document.getElementById('matchesBody');
   matchBody.innerHTML = '';
-  for (const m of matchesCache) {
-    const vehicle = `${m.in_event.vehicle_type} / ${m.in_event.vehicle_color}`;
-    const tr = document.createElement('tr');
-    tr.innerHTML = `<td>${m.in_event.id}</td><td>${m.out_event.id}</td><td>${m.in_event.event_time}</td><td>${m.in_event.checkpoint_name}</td>
-      <td>${m.out_event.event_time}</td><td>${m.out_event.checkpoint_name}</td><td>${m.distance_miles}</td>
-      <td>${m.elapsed_minutes}</td><td>${m.expected_minutes}</td><td>${m.avg_speed_mph} mph</td><td>${m.confidence}</td><td>${vehicle}</td>`;
-    matchBody.appendChild(tr);
+  const routeGroups = groupMatchesByRoute(matchesCache);
+  if (routeGroups.length === 0) {
+    matchBody.innerHTML = '<tr><td colspan="12">No cut-through matches in this period.</td></tr>';
+  } else {
+    for (const [route, matches] of routeGroups) {
+      const section = document.createElement('tr');
+      section.innerHTML = `<td colspan="12" style="background:#eef2ff; font-weight:700;">${route} (${matches.length})</td>`;
+      matchBody.appendChild(section);
+
+      for (const m of matches) {
+        const vehicle = `${m.in_event.vehicle_type} / ${m.in_event.vehicle_color}`;
+        const tr = document.createElement('tr');
+        tr.innerHTML = `<td>${m.in_event.id}</td><td>${m.out_event.id}</td><td>${m.in_event.event_time}</td><td>${m.in_event.checkpoint_name}</td>
+          <td>${m.out_event.event_time}</td><td>${m.out_event.checkpoint_name}</td><td>${m.distance_miles}</td>
+          <td>${m.elapsed_minutes}</td><td>${m.expected_minutes}</td><td>${m.avg_speed_mph} mph</td><td>${m.confidence}</td><td>${vehicle}</td>`;
+        matchBody.appendChild(tr);
+      }
+    }
   }
 
   const arrivals = document.getElementById('arrivalsBody');
