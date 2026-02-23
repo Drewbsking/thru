@@ -267,6 +267,18 @@ code.inline {
   margin-bottom: 0.5rem;
 }
 
+.notes-toggle-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.notes-toggle-row .secondary {
+  padding: 0.32rem 0.62rem;
+  font-size: 0.75rem;
+}
+
 .inline-radio-group {
   display: flex;
   flex-wrap: wrap;

@@ -182,9 +182,12 @@ render_head('Data Entry');
         </div>
       </div>
 
-      <div class="form-row">
-        <div>
-          <label>Comments (Optional)</label>
+      <div class="choice-block">
+        <div class="notes-toggle-row">
+          <div class="choice-title" style="margin-bottom:0;">Comments (Optional)</div>
+          <button type="button" id="notesToggle" class="secondary" aria-expanded="false" aria-controls="notesPanel">Show</button>
+        </div>
+        <div id="notesPanel" hidden style="margin-top:0.35rem;">
           <textarea id="notes" maxlength="255" placeholder="ANY OTHER DETAILS" style="text-transform:uppercase;" autocapitalize="characters"></textarea>
         </div>
       </div>
@@ -218,6 +221,8 @@ const greetingEl = document.getElementById('entryGreeting');
 const contextLabelEl = document.getElementById('entryContextLabel');
 const plateInput = document.getElementById('plate');
 const notesInput = document.getElementById('notes');
+const notesToggle = document.getElementById('notesToggle');
+const notesPanel = document.getElementById('notesPanel');
 const studyPeriodLabel = document.getElementById('studyPeriodLabel');
 const checkpointSummaryLabel = document.getElementById('checkpointSummaryLabel');
 const recentEntriesLink = document.getElementById('recentEntriesLink');
@@ -342,6 +347,17 @@ function clearPendingConfirm() {
   pendingConfirmSignature = '';
 }
 
+function setNotesExpanded(expanded) {
+  if (!notesToggle || !notesPanel) return;
+  if (expanded) {
+    notesPanel.removeAttribute('hidden');
+  } else {
+    notesPanel.setAttribute('hidden', 'hidden');
+  }
+  notesToggle.setAttribute('aria-expanded', expanded ? 'true' : 'false');
+  notesToggle.textContent = expanded ? 'Hide' : 'Show';
+}
+
 function setEntryMetaExpanded(expanded) {
   if (!entryMetaToggle || !entryMetaPanel) return;
   if (expanded) {
@@ -358,6 +374,16 @@ if (entryMetaToggle && entryMetaPanel) {
   setEntryMetaExpanded(!isSmallScreen);
   entryMetaToggle.addEventListener('click', () => {
     setEntryMetaExpanded(entryMetaPanel.hasAttribute('hidden'));
+  });
+}
+if (notesToggle && notesPanel) {
+  setNotesExpanded(false);
+  notesToggle.addEventListener('click', () => {
+    const expand = notesPanel.hasAttribute('hidden');
+    setNotesExpanded(expand);
+    if (expand && notesInput) {
+      notesInput.focus();
+    }
   });
 }
 
@@ -520,6 +546,7 @@ if (form) {
     notifySuccess();
     document.getElementById('plate').value = '';
     document.getElementById('notes').value = '';
+    setNotesExpanded(false);
     document.querySelectorAll('input[name="direction"], input[name="vehicle_type"], input[name="vehicle_color"]').forEach((input) => {
       input.checked = false;
     });
