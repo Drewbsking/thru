@@ -20,6 +20,7 @@
 - Policy status is based on `cut_through_percent >= 25` (configurable in setup).
 - Dashboard and details filter by study period: `Morning Study` or `Afternoon Study` for the selected day.
 - Data collectors are assigned per checkpoint in Site Setup and auto-attached to event records in Data Entry.
+- Checkpoint codes are auto-numbered per site (`1`, `2`, `3`, ...); admins only set display names.
 - Data Entry includes duplicate/ambiguous-plate warning prompts before final save.
 
 ## APIs

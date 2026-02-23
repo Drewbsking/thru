@@ -116,6 +116,7 @@ function ensure_schema(): void
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
 
     seed_defaults();
+    normalize_checkpoint_codes();
 }
 
 function seed_defaults(): void
@@ -156,8 +157,8 @@ function seed_defaults(): void
 
     $cpStmt = db_prepare('INSERT INTO checkpoints (site_id, checkpoint_code, display_name, collector_name, checkpoint_type, is_active) VALUES (?, ?, ?, NULL, ?, 1)');
     $entries = [
-        [$siteId, 'CP1', 'Checkpoint 1', 'Both'],
-        [$siteId, 'CP2', 'Checkpoint 2', 'Both'],
+        [$siteId, '1', 'Checkpoint 1', 'Both'],
+        [$siteId, '2', 'Checkpoint 2', 'Both'],
     ];
     foreach ($entries as $entry) {
         [$sid, $code, $name, $type] = $entry;
@@ -165,4 +166,77 @@ function seed_defaults(): void
         $cpStmt->execute();
     }
     $cpStmt->close();
+}
+
+function normalize_checkpoint_codes(): void
+{
+    $res = db()->query('SELECT id, site_id, checkpoint_code FROM checkpoints ORDER BY site_id ASC, id ASC');
+    $rows = $res ? $res->fetch_all(MYSQLI_ASSOC) : [];
+    if (count($rows) === 0) {
+        return;
+    }
+
+    $bySite = [];
+    foreach ($rows as $row) {
+        $siteId = (int)$row['site_id'];
+        if (!isset($bySite[$siteId])) {
+            $bySite[$siteId] = [];
+        }
+        $bySite[$siteId][] = [
+            'id' => (int)$row['id'],
+            'code' => (string)$row['checkpoint_code'],
+        ];
+    }
+
+    $plans = [];
+    $needsNormalization = false;
+    foreach ($bySite as $siteId => $siteRows) {
+        $expected = 1;
+        foreach ($siteRows as $row) {
+            $target = (string)$expected;
+            if ($row['code'] !== $target) {
+                $needsNormalization = true;
+            }
+            $plans[$siteId][] = [
+                'id' => (int)$row['id'],
+                'target_code' => $target,
+            ];
+            $expected++;
+        }
+    }
+
+    if (!$needsNormalization) {
+        return;
+    }
+
+    $conn = db();
+    $conn->begin_transaction();
+    try {
+        $tmpStmt = db_prepare('UPDATE checkpoints SET checkpoint_code = ? WHERE id = ?');
+        foreach ($plans as $sitePlan) {
+            foreach ($sitePlan as $row) {
+                $tmpCode = 'TMP' . $row['id'];
+                $id = (int)$row['id'];
+                $tmpStmt->bind_param('si', $tmpCode, $id);
+                $tmpStmt->execute();
+            }
+        }
+        $tmpStmt->close();
+
+        $finalStmt = db_prepare('UPDATE checkpoints SET checkpoint_code = ? WHERE id = ?');
+        foreach ($plans as $sitePlan) {
+            foreach ($sitePlan as $row) {
+                $targetCode = (string)$row['target_code'];
+                $id = (int)$row['id'];
+                $finalStmt->bind_param('si', $targetCode, $id);
+                $finalStmt->execute();
+            }
+        }
+        $finalStmt->close();
+
+        $conn->commit();
+    } catch (Throwable $e) {
+        $conn->rollback();
+        throw $e;
+    }
 }

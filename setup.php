@@ -118,11 +118,11 @@ $setupCsrfToken = csrf_token();
 <section class="grid two" style="margin-top:1rem;">
   <article class="card">
     <h2>Checkpoints</h2>
+    <p class="small">Checkpoint numbers are auto-assigned (1, 2, 3...). Display Name is for user convenience.</p>
     <form id="checkpointForm">
       <input type="hidden" id="checkpoint_id" value="0">
       <div class="form-row">
-        <div><label>Checkpoint Code</label><input id="checkpoint_code" placeholder="CP1"></div>
-        <div><label>Display Name</label><input id="display_name" placeholder="Checkpoint 1"></div>
+        <div><label>Display Name</label><input id="display_name" placeholder="Main Entrance"></div>
         <div><label>Data Collector</label><input id="collector_name" maxlength="80" placeholder="Collector assigned to this checkpoint"></div>
         <div><label>Type</label><select id="checkpoint_type"><option>Both</option><option>Entrance</option><option>Exit</option></select></div>
       </div>
@@ -130,7 +130,7 @@ $setupCsrfToken = csrf_token();
       <p id="cpStatus" class="status small"></p>
     </form>
     <table>
-      <thead><tr><th>Code</th><th>Name</th><th>Collector</th><th>Type</th><th>Action</th></tr></thead>
+      <thead><tr><th>#</th><th>Name</th><th>Collector</th><th>Type</th><th>Action</th></tr></thead>
       <tbody id="cpBody"></tbody>
     </table>
   </article>
@@ -457,7 +457,6 @@ document.getElementById('checkpointForm').addEventListener('submit', async (e) =
   const out = await post('save_checkpoint', {
     site_id: selectedSiteId(),
     checkpoint_id: document.getElementById('checkpoint_id').value,
-    checkpoint_code: document.getElementById('checkpoint_code').value,
     display_name: document.getElementById('display_name').value,
     collector_name: document.getElementById('collector_name').value,
     checkpoint_type: document.getElementById('checkpoint_type').value,
@@ -466,7 +465,6 @@ document.getElementById('checkpointForm').addEventListener('submit', async (e) =
   document.getElementById('cpStatus').className = out.ok ? 'status ok' : 'status warn';
   if (out.ok) {
     document.getElementById('checkpoint_id').value = '0';
-    document.getElementById('checkpoint_code').value = '';
     document.getElementById('display_name').value = '';
     document.getElementById('collector_name').value = '';
     document.getElementById('checkpoint_type').value = 'Both';
@@ -484,7 +482,6 @@ document.getElementById('cpBody').addEventListener('click', async (e) => {
     const cp = site?.checkpoints.find(c => Number(c.id) === cpId);
     if (!cp) return;
     document.getElementById('checkpoint_id').value = cp.id;
-    document.getElementById('checkpoint_code').value = cp.checkpoint_code;
     document.getElementById('display_name').value = cp.display_name;
     document.getElementById('collector_name').value = cp.collector_name || '';
     document.getElementById('checkpoint_type').value = cp.checkpoint_type;
