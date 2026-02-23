@@ -11,6 +11,7 @@ render_head('Cut-Through Details');
 <section class="card">
   <h1>Cut-Through Details</h1>
   <p class="small">High confidence matches are paired one-to-one. Unmatched In events are treated as local arrivals, unmatched Out events as local departures.</p>
+  <p class="small">All times shown in Eastern Time (ET).</p>
   <div class="form-row">
     <div>
       <label>Site</label>
@@ -57,7 +58,12 @@ render_head('Cut-Through Details');
 let matchesCache = [];
 
 function currentStudyPeriod() {
-  return (new Date().getHours() < 12) ? 'morning' : 'afternoon';
+  const hourEt = Number(new Intl.DateTimeFormat('en-US', {
+    hour: 'numeric',
+    hour12: false,
+    timeZone: 'America/New_York'
+  }).format(new Date()));
+  return hourEt < 12 ? 'morning' : 'afternoon';
 }
 
 function csvEscape(v) {
@@ -79,6 +85,22 @@ function groupMatchesByRoute(matches) {
     grouped.get(key).push(match);
   }
   return Array.from(grouped.entries()).sort((a, b) => a[0].localeCompare(b[0], undefined, { numeric: true, sensitivity: 'base' }));
+}
+
+function formatEtDateTime(value) {
+  const raw = String(value || '').trim();
+  if (!raw) return '--';
+  const m = raw.match(/^(\d{4})-(\d{2})-(\d{2})[ T](\d{2}):(\d{2})(?::\d{2})?$/);
+  if (!m) return raw;
+  const year = Number(m[1]);
+  const month = Number(m[2]);
+  const day = Number(m[3]);
+  const hour24 = Number(m[4]);
+  const minute = m[5];
+  const monthName = new Intl.DateTimeFormat('en-US', { month: 'short' }).format(new Date(year, month - 1, day));
+  const ampm = hour24 >= 12 ? 'PM' : 'AM';
+  const hour12 = (hour24 % 12) || 12;
+  return `${monthName} ${day}, ${year}, ${hour12}:${minute} ${ampm} ET`;
 }
 
 function exportCsv() {
@@ -134,8 +156,8 @@ async function loadDetails() {
       for (const m of matches) {
         const vehicle = `${m.in_event.vehicle_type} / ${m.in_event.vehicle_color}`;
         const tr = document.createElement('tr');
-        tr.innerHTML = `<td>${m.in_event.id}</td><td>${m.out_event.id}</td><td>${m.in_event.event_time}</td><td>${m.in_event.checkpoint_name}</td>
-          <td>${m.out_event.event_time}</td><td>${m.out_event.checkpoint_name}</td><td>${m.distance_miles}</td>
+        tr.innerHTML = `<td>${m.in_event.id}</td><td>${m.out_event.id}</td><td>${formatEtDateTime(m.in_event.event_time)}</td><td>${m.in_event.checkpoint_name}</td>
+          <td>${formatEtDateTime(m.out_event.event_time)}</td><td>${m.out_event.checkpoint_name}</td><td>${m.distance_miles}</td>
           <td>${m.elapsed_minutes}</td><td>${m.expected_minutes}</td><td>${m.avg_speed_mph} mph</td><td>${m.confidence}</td><td>${vehicle}</td>`;
         matchBody.appendChild(tr);
       }
@@ -149,7 +171,7 @@ async function loadDetails() {
 
   for (const e of arrivalsData) {
     const tr = document.createElement('tr');
-    tr.innerHTML = `<td>${e.event_time}</td><td>${e.checkpoint_name}</td><td>${e.plate_raw || ''}</td><td>${e.vehicle_type} / ${e.vehicle_color}</td>`;
+    tr.innerHTML = `<td>${formatEtDateTime(e.event_time)}</td><td>${e.checkpoint_name}</td><td>${e.plate_raw || ''}</td><td>${e.vehicle_type} / ${e.vehicle_color}</td>`;
     arrivals.appendChild(tr);
   }
 
@@ -157,7 +179,7 @@ async function loadDetails() {
   dep.innerHTML = '';
   for (const e of depData) {
     const tr = document.createElement('tr');
-    tr.innerHTML = `<td>${e.event_time}</td><td>${e.checkpoint_name}</td><td>${e.plate_raw || ''}</td><td>${e.vehicle_type} / ${e.vehicle_color}</td>`;
+    tr.innerHTML = `<td>${formatEtDateTime(e.event_time)}</td><td>${e.checkpoint_name}</td><td>${e.plate_raw || ''}</td><td>${e.vehicle_type} / ${e.vehicle_color}</td>`;
     dep.appendChild(tr);
   }
 }

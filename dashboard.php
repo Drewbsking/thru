@@ -11,6 +11,7 @@ render_head('Dashboard');
 <section class="card">
   <h1>Dashboard</h1>
   <p class="small">Auto-refreshes every <span id="pollLabel">10</span> seconds. Cut-through is calculated with expected travel time from checkpoint distance and speed setting.</p>
+  <p class="small">All times shown in Eastern Time (ET).</p>
   <?php if (!$activeSite): ?>
     <p class="status warn">No active site is configured. Set one in Site Setup.</p>
   <?php else: ?>
@@ -77,7 +78,12 @@ const refreshBtn = document.getElementById('refreshBtn');
 const studyPeriodSelect = document.getElementById('study_period');
 
 function currentStudyPeriod() {
-  return (new Date().getHours() < 12) ? 'morning' : 'afternoon';
+  const hourEt = Number(new Intl.DateTimeFormat('en-US', {
+    hour: 'numeric',
+    hour12: false,
+    timeZone: 'America/New_York'
+  }).format(new Date()));
+  return hourEt < 12 ? 'morning' : 'afternoon';
 }
 
 function kpiCard(label, value, css='') {
@@ -101,20 +107,23 @@ function groupMatchesByRoute(matches) {
 }
 
 function formatKpiDateTime(value) {
+  return formatEtDateTime(value, true);
+}
+
+function formatEtDateTime(value, longMonth = false) {
   const raw = String(value || '').trim();
   if (!raw) return '--';
-  const dt = new Date(raw.replace(' ', 'T'));
-  if (Number.isNaN(dt.getTime())) return raw;
-  const datePart = new Intl.DateTimeFormat('en-US', {
-    month: 'long',
-    day: 'numeric',
-    year: 'numeric'
-  }).format(dt);
-  const timePart = new Intl.DateTimeFormat('en-US', {
-    hour: 'numeric',
-    minute: '2-digit'
-  }).format(dt);
-  return `${datePart}, ${timePart}`;
+  const m = raw.match(/^(\d{4})-(\d{2})-(\d{2})[ T](\d{2}):(\d{2})(?::\d{2})?$/);
+  if (!m) return raw;
+  const year = Number(m[1]);
+  const month = Number(m[2]);
+  const day = Number(m[3]);
+  const hour24 = Number(m[4]);
+  const minute = m[5];
+  const monthName = new Intl.DateTimeFormat('en-US', { month: longMonth ? 'long' : 'short' }).format(new Date(year, month - 1, day));
+  const ampm = hour24 >= 12 ? 'PM' : 'AM';
+  const hour12 = (hour24 % 12) || 12;
+  return `${monthName} ${day}, ${year}, ${hour12}:${minute} ${ampm} ET`;
 }
 
 async function loadDashboard() {
@@ -171,8 +180,8 @@ async function loadDashboard() {
         const tr = document.createElement('tr');
         tr.innerHTML = `<td>${m.in_event.id}</td>
           <td>${m.out_event.id}</td>
-          <td>${m.in_event.checkpoint_name} ${m.in_event.event_time}</td>
-          <td>${m.out_event.checkpoint_name} ${m.out_event.event_time}</td>
+          <td>${m.in_event.checkpoint_name} ${formatEtDateTime(m.in_event.event_time)}</td>
+          <td>${m.out_event.checkpoint_name} ${formatEtDateTime(m.out_event.event_time)}</td>
           <td>${m.elapsed_minutes} min</td>
           <td>${m.expected_minutes} min</td>
           <td>${m.avg_speed_mph} mph</td>
@@ -186,7 +195,7 @@ async function loadDashboard() {
   recentBody.innerHTML = '';
   json.recent_events.forEach(e => {
     const tr = document.createElement('tr');
-    tr.innerHTML = `<td>${e.id}</td><td>${e.event_time}</td><td>${e.checkpoint_name}</td><td>${e.direction}</td><td>${e.plate_raw || ''}</td><td>${e.vehicle_type}</td><td>${e.vehicle_color}</td><td>${e.observer_name || ''}</td>`;
+    tr.innerHTML = `<td>${e.id}</td><td>${formatEtDateTime(e.event_time)}</td><td>${e.checkpoint_name}</td><td>${e.direction}</td><td>${e.plate_raw || ''}</td><td>${e.vehicle_type}</td><td>${e.vehicle_color}</td><td>${e.observer_name || ''}</td>`;
     recentBody.appendChild(tr);
   });
 

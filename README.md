@@ -48,6 +48,8 @@
 - Optional auth seed env vars:
   - `THRU_APP_ADMIN_USER` (default: `admin`)
   - `THRU_APP_ADMIN_PASSWORD` (default: `T-CAT2026`)
+- Optional app timezone env var:
+  - `THRU_APP_TIMEZONE` (default: `America/New_York`)
 
 ## Access Control
 - The app is session-protected with role-based authorization.

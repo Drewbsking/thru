@@ -22,8 +22,9 @@ if (!can_access_checkpoint($siteId, $checkpointId)) {
     json_response(['ok' => false, 'error' => 'Not authorized for this checkpoint.'], 403);
 }
 
-$stmt = db_prepare('SELECT id, event_time, plate_raw FROM traffic_events WHERE site_id = ? AND checkpoint_id = ? AND direction = ? AND vehicle_type = ? AND vehicle_color = ? AND event_time >= DATE_SUB(NOW(), INTERVAL 20 SECOND) ORDER BY id DESC LIMIT 1');
-$stmt->bind_param('iisss', $siteId, $checkpointId, $direction, $vehicleType, $vehicleColor);
+$threshold = date('Y-m-d H:i:s', time() - 20);
+$stmt = db_prepare('SELECT id, event_time, plate_raw FROM traffic_events WHERE site_id = ? AND checkpoint_id = ? AND direction = ? AND vehicle_type = ? AND vehicle_color = ? AND event_time >= ? ORDER BY id DESC LIMIT 1');
+$stmt->bind_param('iissss', $siteId, $checkpointId, $direction, $vehicleType, $vehicleColor, $threshold);
 $stmt->execute();
 $row = $stmt->get_result()?->fetch_assoc();
 $stmt->close();

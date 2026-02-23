@@ -4,6 +4,11 @@ declare(strict_types=1);
 
 require_once __DIR__ . '/db.php';
 
+$appTimezone = (string)(getenv('THRU_APP_TIMEZONE') ?: 'America/New_York');
+if (!date_default_timezone_set($appTimezone)) {
+    date_default_timezone_set('America/New_York');
+}
+
 function ensure_schema(): void
 {
     db_exec("CREATE TABLE IF NOT EXISTS app_settings (

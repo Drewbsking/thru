@@ -60,6 +60,7 @@ render_head('Data Entry');
   <?php if ($site): ?>
     <p id="entryGreeting" class="status ok">You are recording at <?= h((string)$site['name']) ?>.</p>
   <?php endif; ?>
+  <p class="small">All times use Eastern Time (ET).</p>
   <p class="small" id="studyPeriodLabel">Current Study Period: --</p>
   <p class="small" id="checkpointSummaryLabel">Checkpoint Summary: --</p>
   <p class="small">Checkpoint can be locked by link. This prevents wrong checkpoint tagging when different observers are logging traffic. Studies are typically short roadside sessions (around 2 hours).</p>
@@ -217,7 +218,12 @@ function getCheckpointId() {
 }
 
 function getCurrentStudyPeriod() {
-  return (new Date().getHours() < 12) ? 'morning' : 'afternoon';
+  const hourEt = Number(new Intl.DateTimeFormat('en-US', {
+    hour: 'numeric',
+    hour12: false,
+    timeZone: 'America/New_York'
+  }).format(new Date()));
+  return hourEt < 12 ? 'morning' : 'afternoon';
 }
 
 function currentStudyPeriodLabel() {
@@ -240,6 +246,22 @@ function escapeHtml(value) {
     .replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;')
     .replace(/'/g, '&#39;');
+}
+
+function formatEtDateTime(value) {
+  const raw = String(value || '').trim();
+  if (!raw) return '--';
+  const m = raw.match(/^(\d{4})-(\d{2})-(\d{2})[ T](\d{2}):(\d{2})(?::\d{2})?$/);
+  if (!m) return raw;
+  const year = Number(m[1]);
+  const month = Number(m[2]);
+  const day = Number(m[3]);
+  const hour24 = Number(m[4]);
+  const minute = m[5];
+  const monthName = new Intl.DateTimeFormat('en-US', { month: 'short' }).format(new Date(year, month - 1, day));
+  const ampm = hour24 >= 12 ? 'PM' : 'AM';
+  const hour12 = (hour24 % 12) || 12;
+  return `${monthName} ${day}, ${year}, ${hour12}:${minute} ${ampm} ET`;
 }
 
 function notifySuccess() {
@@ -356,7 +378,7 @@ async function loadRecentEntries() {
     const colorOptions = vehicleColorOptions.map((opt) => `<option value="${escapeHtml(opt)}"${opt === e.vehicle_color ? ' selected' : ''}>${escapeHtml(opt)}</option>`).join('');
     const tr = document.createElement('tr');
     tr.innerHTML = `<td>${e.id}</td>
-      <td>${escapeHtml(e.event_time)}</td>
+      <td>${escapeHtml(formatEtDateTime(e.event_time))}</td>
       <td data-field=\"direction\">${escapeHtml(e.direction)}</td>
       <td data-field=\"plate_raw\">${escapeHtml(e.plate_raw || '')}</td>
       <td data-field=\"vehicle_type\">${escapeHtml(e.vehicle_type)}</td>
@@ -605,7 +627,8 @@ if (form) {
       const dupJson = await dupRes.json();
       if (dupJson.ok && dupJson.duplicate) {
         pendingConfirmSignature = signature;
-        statusEl.textContent = `Possible duplicate near ${dupJson.latest?.event_time || 'just now'}. Press Save Event again to confirm.`;
+        const dupTime = dupJson.latest?.event_time ? formatEtDateTime(dupJson.latest.event_time) : 'just now';
+        statusEl.textContent = `Possible duplicate near ${dupTime}. Press Save Event again to confirm.`;
         statusEl.className = 'status warn';
         return;
       }
