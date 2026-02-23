@@ -27,10 +27,32 @@ body {
   color: #fff;
 }
 
+.topbar-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
 .brand { font-weight: 700; letter-spacing: 0.4px; }
 .nav { display: flex; flex-wrap: wrap; gap: 0.8rem; }
 .nav a { color: #dbeafe; text-decoration: none; }
 .nav a:hover { color: #fff; }
+
+.nav-toggle {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 8px;
+  border: 1px solid #475569;
+  background: #1e293b;
+  color: #f8fafc;
+  font-size: 1.3rem;
+  line-height: 1;
+  padding: 0;
+}
 
 .page { max-width: 1200px; margin: 1rem auto 2rem; padding: 0 1rem; }
 
@@ -309,9 +331,9 @@ code.inline {
 
 .vehicle-type-chip .vehicle-name {
   display: block;
-  font-size: 0.9rem;
+  font-size: 0.48rem;
   font-weight: 800;
-  line-height: 1.2;
+  line-height: 1.05;
   text-align: center;
 }
 
@@ -333,6 +355,8 @@ code.inline {
   border-width: 2px;
   border-color: #94a3b8;
   font-weight: 700;
+  font-size: 0.48rem;
+  line-height: 1.05;
   text-shadow: 0 1px 1px rgba(15, 23, 42, 0.2);
 }
 
@@ -429,7 +453,7 @@ code.inline {
   }
 
   .vehicle-type-chip .vehicle-name {
-    font-size: 0.74rem;
+    font-size: 0.42rem;
     line-height: 1.1;
   }
 
@@ -441,7 +465,8 @@ code.inline {
   .radio-chip.color-chip span {
     min-height: 36px;
     padding: 0.35rem 0.45rem;
-    font-size: 0.78rem;
+    font-size: 0.42rem;
+    line-height: 1.05;
   }
 }
 
@@ -452,10 +477,6 @@ code.inline {
 
   .topbar {
     padding: 0.7rem 0.75rem;
-  }
-
-  .nav {
-    gap: 0.45rem;
   }
 
   .radio-grid {
@@ -472,5 +493,45 @@ code.inline {
 
   .color-chip-grid {
     grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 900px) {
+  .topbar {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.55rem;
+  }
+
+  .topbar-row {
+    width: 100%;
+  }
+
+  .brand {
+    font-size: 0.98rem;
+  }
+
+  .nav-toggle {
+    display: inline-flex;
+  }
+
+  .nav {
+    display: none;
+    flex-direction: column;
+    gap: 0.35rem;
+    width: 100%;
+    padding: 0.2rem 0;
+  }
+
+  .topbar.nav-open .nav {
+    display: flex;
+  }
+
+  .nav a {
+    display: block;
+    width: 100%;
+    padding: 0.5rem 0.55rem;
+    border-radius: 8px;
+    background: #1e293b;
   }
 }

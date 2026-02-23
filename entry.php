@@ -102,7 +102,7 @@ render_head('Data Entry');
         <div class="choice-title">Vehicle In/Out</div>
         <div class="direction-chip-grid">
           <label class="radio-chip direction-chip">
-            <input type="radio" name="direction" value="In" checked>
+            <input type="radio" name="direction" value="In">
             <span><span class="direction-icon"><img src="login-svgrepo-com.svg" alt="" class="direction-icon-img"></span><span class="direction-name">In</span></span>
           </label>
           <label class="radio-chip direction-chip">
@@ -116,7 +116,7 @@ render_head('Data Entry');
         <div class="choice-title">Vehicle Type</div>
         <div class="vehicle-type-grid">
           <label class="radio-chip vehicle-type-chip">
-            <input type="radio" name="vehicle_type" value="Sedan" checked>
+            <input type="radio" name="vehicle_type" value="Sedan">
             <span><span class="vehicle-icon">🚗</span><span class="vehicle-name">Sedan</span></span>
           </label>
           <label class="radio-chip vehicle-type-chip">
@@ -150,7 +150,7 @@ render_head('Data Entry');
         <div class="choice-title">Vehicle Color</div>
         <div class="color-chip-grid">
           <label class="radio-chip color-chip color-white">
-            <input type="radio" name="vehicle_color" value="White" checked>
+            <input type="radio" name="vehicle_color" value="White">
             <span>White</span>
           </label>
           <label class="radio-chip color-chip color-black-blue">
@@ -340,7 +340,7 @@ function currentEntrySignature() {
   return [
     getSiteId(),
     getCheckpointId(),
-    selectedRadioValue('direction') || 'In',
+    selectedRadioValue('direction'),
     (plateInput ? plateInput.value.trim().toUpperCase() : ''),
     selectedRadioValue('vehicle_type'),
     selectedVehicleColor()
@@ -620,10 +620,11 @@ if (form) {
     e.preventDefault();
 
     const payload = new FormData();
+    const direction = selectedRadioValue('direction');
     const vehicleType = selectedRadioValue('vehicle_type');
     const vehicleColor = selectedVehicleColor();
-    if (!vehicleType || !vehicleColor) {
-      statusEl.textContent = 'Select a vehicle type and color.';
+    if (!direction || !vehicleType || !vehicleColor) {
+      statusEl.textContent = 'Select In/Out, vehicle type, and color.';
       statusEl.className = 'status warn';
       return;
     }
@@ -638,7 +639,7 @@ if (form) {
 
     payload.append('site_id', String(siteId));
     payload.append('checkpoint_id', String(checkpointId));
-    payload.append('direction', selectedRadioValue('direction') || 'In');
+    payload.append('direction', direction);
     payload.append('plate', (document.getElementById('plate').value || '').toUpperCase());
     payload.append('vehicle_type', vehicleType);
     payload.append('vehicle_color', vehicleColor);
@@ -672,6 +673,9 @@ if (form) {
     notifySuccess();
     document.getElementById('plate').value = '';
     document.getElementById('notes').value = '';
+    document.querySelectorAll('input[name="direction"], input[name="vehicle_type"], input[name="vehicle_color"]').forEach((input) => {
+      input.checked = false;
+    });
     if (plateInput) {
       plateInput.focus();
       plateInput.select();
