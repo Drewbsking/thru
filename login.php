@@ -8,6 +8,7 @@ require_once __DIR__ . '/lib/utils.php';
 
 ensure_schema();
 auth_session_start();
+$appName = 'N-CAT: Neighborhood Cut-through Analysis Tool';
 
 if (is_dashboard_viewer()) {
     header('Location: dashboard.php', true, 302);
@@ -51,7 +52,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Login | N-CAT</title>
+  <title><?= h($appName) ?> - Login</title>
   <link rel="stylesheet" href="assets/app.css">
 </head>
 <body>
