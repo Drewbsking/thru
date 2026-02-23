@@ -191,7 +191,6 @@ render_head('Data Entry');
       </div>
       <div class="actions">
         <button type="submit">Save Event</button>
-        <a class="btn secondary" href="dashboard.php">View Dashboard</a>
       </div>
       <p id="saveStatus" class="status small" style="margin-top:0.7rem;"></p>
     </form>

@@ -325,12 +325,12 @@ code.inline {
 }
 
 .vehicle-type-chip > span {
-  min-height: 104px;
+  min-height: 84px;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 0.25rem;
+  gap: 0.16rem;
   border-width: 2px;
   border-color: #cbd5e1;
   background: #ffffff;
@@ -338,7 +338,7 @@ code.inline {
 
 .vehicle-type-chip .vehicle-icon {
   display: block;
-  font-size: 1.7rem;
+  font-size: 1.45rem;
   line-height: 1;
 }
 
@@ -456,13 +456,13 @@ code.inline {
   }
 
   .vehicle-type-chip > span {
-    min-height: 82px;
-    padding: 0.35rem 0.3rem;
-    gap: 0.16rem;
+    min-height: 68px;
+    padding: 0.28rem 0.26rem;
+    gap: 0.12rem;
   }
 
   .vehicle-type-chip .vehicle-icon {
-    font-size: 1.3rem;
+    font-size: 1.08rem;
   }
 
   .vehicle-type-chip .vehicle-name {
