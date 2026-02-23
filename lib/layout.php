@@ -12,16 +12,17 @@ require_auth_page();
 function render_head(string $title): void
 {
     $isLoggedIn = is_authenticated() || is_dashboard_viewer();
+    $appName = 'N-CAT: Neighborhood Cut-through Analysis Tool';
 
     echo '<!DOCTYPE html><html lang="en"><head>';
     echo '<meta charset="UTF-8">';
     echo '<meta name="viewport" content="width=device-width, initial-scale=1.0">';
-    echo '<title>' . h($title . ' | N-CAT') . '</title>';
+    echo '<title>' . h($appName . ' - ' . $title) . '</title>';
     echo '<link rel="stylesheet" href="assets/app.css">';
     echo '</head><body>';
     echo '<header class="topbar" id="appTopbar">';
     echo '<div class="topbar-row">';
-    echo '<div class="brand">N-CAT: Neighborhood Cut-through Analysis Tool</div>';
+    echo '<div class="brand">' . h($appName) . '</div>';
     echo '<button type="button" class="nav-toggle" id="navToggle" aria-controls="siteNav" aria-expanded="false" aria-label="Toggle navigation menu">☰</button>';
     echo '</div>';
     echo '<nav class="nav" id="siteNav">';
