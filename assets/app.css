@@ -529,6 +529,13 @@ code.inline {
 }
 
 @media (max-width: 900px) {
+  /* iOS Safari auto-zooms focused form controls when text is below 16px. */
+  input,
+  select,
+  textarea {
+    font-size: 16px;
+  }
+
   .topbar {
     flex-direction: column;
     align-items: stretch;
