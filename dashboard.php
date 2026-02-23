@@ -52,21 +52,20 @@ render_head('Dashboard');
   <div id="pairChart" class="pair-chart"></div>
 </section>
 
-<section class="grid two" style="margin-top:1rem;">
-  <article class="card">
-    <h2>Checkpoint Counts</h2>
-    <table>
-      <thead><tr><th>Checkpoint</th><th>In</th><th>Out</th><th>Total (Two-Way)</th></tr></thead>
-      <tbody id="checkpointBody"></tbody>
-    </table>
-  </article>
-  <article class="card">
-    <h2>Cut-Through Matches</h2>
-    <table>
-      <thead><tr><th>In Event #</th><th>Out Event #</th><th>In</th><th>Out</th><th>Elapsed</th><th>Expected</th><th>Avg Speed</th><th>Confidence</th></tr></thead>
-      <tbody id="matchBody"></tbody>
-    </table>
-  </article>
+<section class="card" style="margin-top:1rem;">
+  <h2>Checkpoint Counts</h2>
+  <table>
+    <thead><tr><th>Checkpoint</th><th>In</th><th>Out</th><th>Total (Two-Way)</th></tr></thead>
+    <tbody id="checkpointBody"></tbody>
+  </table>
+</section>
+
+<section class="card" style="margin-top:1rem;">
+  <h2>Cut-Through Matches</h2>
+  <table>
+    <thead><tr><th>In Event #</th><th>Out Event #</th><th>In</th><th>Out</th><th>Elapsed</th><th>Expected</th><th>Avg Speed</th><th>Confidence</th></tr></thead>
+    <tbody id="matchBody"></tbody>
+  </table>
 </section>
 
 <section class="card" style="margin-top:1rem;">

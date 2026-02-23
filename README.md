@@ -34,6 +34,7 @@
 ## Database
 - Auto-bootstrap runs when pages/APIs load.
 - Manual schema is in `sql/schema.sql`.
+- Demo seed script is in `sql/seed_seeded_site.sql` (creates/activates `Seeded Site` with randomized AM/PM data).
 - Tables used by this app:
   - `app_settings`: Global config values (speed, buffer, confidence, poll interval, policy threshold).
   - `users`: Login accounts (`admin` and `collector` roles).
@@ -65,3 +66,4 @@
 ## Notes
 - Works on shared PHP/MySQL hosting.
 - Uploads are stored in `uploads/site-images`.
+- To load demo data quickly in phpMyAdmin: run `sql/seed_seeded_site.sql`, then open Dashboard.
