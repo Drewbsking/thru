@@ -49,7 +49,7 @@ if ($action === 'edit') {
     $vehicleColor = trim((string)($_POST['vehicle_color'] ?? ''));
     $notes = trim((string)($_POST['notes'] ?? ''));
 
-    $allowedTypes = ['Sedan', 'SUV', 'Truck', 'Minivan', 'Trailer', 'Motorcycle', 'Trailer/Motorcycle'];
+    $allowedTypes = ['Sedan', 'SUV', 'Pickup Truck', 'Truck', 'Minivan', 'Motorcycle', 'Other', 'Trailer', 'Trailer/Motorcycle'];
     $allowedColors = ['White', 'Black/Blue', 'Gray/Silver', 'Red', 'Green', 'Other'];
     if (!in_array($vehicleType, $allowedTypes, true)) {
         json_response(['ok' => false, 'error' => 'Invalid vehicle type.'], 422);

@@ -21,7 +21,7 @@ $userId = current_user_id();
 if ($siteId <= 0 || $checkpointId <= 0 || $vehicleType === '' || $vehicleColor === '') {
     json_response(['ok' => false, 'error' => 'Missing required fields.'], 422);
 }
-$allowedTypes = ['Sedan', 'SUV', 'Truck', 'Minivan', 'Trailer', 'Motorcycle', 'Trailer/Motorcycle'];
+$allowedTypes = ['Sedan', 'SUV', 'Pickup Truck', 'Truck', 'Minivan', 'Motorcycle', 'Other', 'Trailer', 'Trailer/Motorcycle'];
 $allowedColors = ['White', 'Black/Blue', 'Gray/Silver', 'Red', 'Green', 'Other'];
 if (!in_array($vehicleType, $allowedTypes, true)) {
     json_response(['ok' => false, 'error' => 'Invalid vehicle type.'], 422);

@@ -104,11 +104,11 @@ render_head('Data Entry');
         <div class="direction-chip-grid">
           <label class="radio-chip direction-chip">
             <input type="radio" name="direction" value="In" checked>
-            <span><span class="direction-icon">⬇️</span><span class="direction-name">In</span></span>
+            <span><span class="direction-icon"><img src="login-svgrepo-com.svg" alt="" class="direction-icon-img"></span><span class="direction-name">In</span></span>
           </label>
           <label class="radio-chip direction-chip">
             <input type="radio" name="direction" value="Out">
-            <span><span class="direction-icon">⬆️</span><span class="direction-name">Out</span></span>
+            <span><span class="direction-icon"><img src="logout-svgrepo-com.svg" alt="" class="direction-icon-img"></span><span class="direction-name">Out</span></span>
           </label>
         </div>
       </div>
@@ -125,20 +125,24 @@ render_head('Data Entry');
             <span><span class="vehicle-icon">🚙</span><span class="vehicle-name">SUV</span></span>
           </label>
           <label class="radio-chip vehicle-type-chip">
+            <input type="radio" name="vehicle_type" value="Pickup Truck">
+            <span><span class="vehicle-icon">🛻</span><span class="vehicle-name">Pickup Truck</span></span>
+          </label>
+          <label class="radio-chip vehicle-type-chip">
             <input type="radio" name="vehicle_type" value="Truck">
-            <span><span class="vehicle-icon">🛻</span><span class="vehicle-name">Truck</span></span>
+            <span><span class="vehicle-icon">🚛</span><span class="vehicle-name">Truck</span></span>
           </label>
           <label class="radio-chip vehicle-type-chip">
             <input type="radio" name="vehicle_type" value="Minivan">
             <span><span class="vehicle-icon">🚐</span><span class="vehicle-name">Minivan</span></span>
           </label>
           <label class="radio-chip vehicle-type-chip">
-            <input type="radio" name="vehicle_type" value="Trailer">
-            <span><span class="vehicle-icon">🚛</span><span class="vehicle-name">Trailer</span></span>
-          </label>
-          <label class="radio-chip vehicle-type-chip">
             <input type="radio" name="vehicle_type" value="Motorcycle">
             <span><span class="vehicle-icon">🏍️</span><span class="vehicle-name">Motorcycle</span></span>
+          </label>
+          <label class="radio-chip vehicle-type-chip">
+            <input type="radio" name="vehicle_type" value="Other">
+            <span><span class="vehicle-icon">🛸</span><span class="vehicle-name">Other</span></span>
           </label>
         </div>
       </div>
@@ -227,7 +231,7 @@ const checkpointSummaryLabel = document.getElementById('checkpointSummaryLabel')
 const recentEntriesToggle = document.getElementById('recentEntriesToggle');
 const recentEntriesPanel = document.getElementById('recentEntriesPanel');
 const recentEntryBody = document.getElementById('recentEntryBody');
-const vehicleTypeOptions = ['Sedan', 'SUV', 'Truck', 'Minivan', 'Trailer', 'Motorcycle', 'Trailer/Motorcycle'];
+const vehicleTypeOptions = ['Sedan', 'SUV', 'Pickup Truck', 'Truck', 'Minivan', 'Motorcycle', 'Other', 'Trailer', 'Trailer/Motorcycle'];
 const vehicleColorOptions = ['White', 'Black/Blue', 'Gray/Silver', 'Red', 'Green', 'Other'];
 
 function forceUppercaseInput(el) {
