@@ -45,6 +45,13 @@ render_head('Dashboard');
 
 <section class="grid three" style="margin-top:1rem;" id="kpis"></section>
 
+<section class="card" style="margin-top:1rem;">
+  <h2>Cut-Through by Checkpoint Pair</h2>
+  <p class="small">Matched cut-through vehicles grouped by checkpoint direction pair.</p>
+  <p class="small" id="pairChartMeta">No pair data loaded yet.</p>
+  <div id="pairChart" class="pair-chart"></div>
+</section>
+
 <section class="grid two" style="margin-top:1rem;">
   <article class="card">
     <h2>Checkpoint Counts</h2>
@@ -106,6 +113,40 @@ function groupMatchesByRoute(matches) {
   return Array.from(grouped.entries()).sort((a, b) => a[0].localeCompare(b[0], undefined, { numeric: true, sensitivity: 'base' }));
 }
 
+function pairCountsByRoute(matches) {
+  const grouped = groupMatchesByRoute(matches).map(([route, rows]) => ({ route, count: rows.length }));
+  return grouped.sort((a, b) => (b.count - a.count) || a.route.localeCompare(b.route, undefined, { numeric: true, sensitivity: 'base' }));
+}
+
+function renderPairChart(matches) {
+  const chartEl = document.getElementById('pairChart');
+  const metaEl = document.getElementById('pairChartMeta');
+  if (!chartEl || !metaEl) return;
+
+  const pairCounts = pairCountsByRoute(matches || []);
+  if (pairCounts.length === 0) {
+    metaEl.textContent = 'No cut-through pair matches in this period.';
+    chartEl.innerHTML = '<div class="small">No chart data to display.</div>';
+    return;
+  }
+
+  const top = pairCounts[0];
+  metaEl.textContent = `Unique pairs: ${pairCounts.length} | Top pair: ${top.route} (${top.count})`;
+  const maxCount = Math.max(...pairCounts.map((p) => p.count), 1);
+  chartEl.innerHTML = pairCounts.map((pair) => {
+    const widthPct = Math.max(8, Math.round((pair.count / maxCount) * 100));
+    return `<div class="pair-bar-row">
+      <div class="pair-bar-head">
+        <span class="pair-route">${pair.route}</span>
+        <span class="pair-count">${pair.count}</span>
+      </div>
+      <div class="pair-bar-track">
+        <div class="pair-bar-fill" style="width:${widthPct}%"></div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
 function formatKpiDateTime(value) {
   return formatEtDateTime(value, true);
 }
@@ -156,6 +197,7 @@ async function loadDashboard() {
     kpiCard('Local Arrivals (In only)', summary.local_arrivals_count),
     kpiCard('Local Departures (Out only)', summary.local_departures_count),
   ].join('');
+  renderPairChart(json.matches || []);
 
   const cpBody = document.getElementById('checkpointBody');
   cpBody.innerHTML = '';

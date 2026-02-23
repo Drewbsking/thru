@@ -63,7 +63,7 @@ render_head('Data Entry');
   <p class="small">All times use Eastern Time (ET).</p>
   <p class="small" id="studyPeriodLabel">Current Study Period: --</p>
   <p class="small" id="checkpointSummaryLabel">Checkpoint Summary: --</p>
-  <p class="small">Checkpoint can be locked by link. This prevents wrong checkpoint tagging when different observers are logging traffic. Studies are typically short roadside sessions (around 2 hours).</p>
+  <p class="small">Your checkpoint is set by your account assignment to prevent wrong tagging. Optional link locking can still be used as an extra safeguard. Studies are typically short roadside sessions (around 2 hours).</p>
 
   <?php if (!$site): ?>
     <p class="status warn"><?= $isAdmin ? 'No active site found. Configure a site first in Site Setup.' : 'No checkpoint assignment found for your account. Ask an admin to assign your checkpoint.' ?></p>

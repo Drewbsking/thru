@@ -83,6 +83,48 @@ table { width: 100%; border-collapse: collapse; margin-top: 0.5rem; background: 
 th, td { border: 1px solid var(--line); padding: 0.48rem; text-align: left; font-size: 0.9rem; }
 th { background: #f3f6fb; }
 
+.pair-chart {
+  display: grid;
+  gap: 0.55rem;
+}
+
+.pair-bar-row {
+  display: grid;
+  gap: 0.2rem;
+}
+
+.pair-bar-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.6rem;
+}
+
+.pair-route {
+  font-size: 0.92rem;
+  font-weight: 700;
+}
+
+.pair-count {
+  min-width: 2ch;
+  text-align: right;
+  font-weight: 800;
+  color: #0f172a;
+}
+
+.pair-bar-track {
+  height: 14px;
+  border-radius: 999px;
+  overflow: hidden;
+  border: 1px solid #cbd5e1;
+  background: #e2e8f0;
+}
+
+.pair-bar-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #0b6e4f 0%, #22c55e 100%);
+}
+
 .kpi { font-size: 1.4rem; font-weight: 800; }
 .kpi-label { font-size: 0.86rem; color: var(--muted); }
 
