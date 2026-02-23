@@ -9,7 +9,6 @@ $activeSite = $siteId > 0 ? site_by_id($siteId) : null;
 render_head('Dashboard');
 ?>
 <section class="card">
-  <h1>Dashboard</h1>
   <p class="small">Auto-refreshes every <span id="pollLabel">10</span> seconds. Cut-through is calculated with expected travel time from checkpoint distance and speed setting.</p>
   <p class="small">All times shown in Eastern Time (ET).</p>
   <?php if (!$activeSite): ?>

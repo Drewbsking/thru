@@ -55,7 +55,6 @@ $initialCollectorName = current_username();
 render_head('Data Entry');
 ?>
 <section class="card entry-compact">
-  <h1>Data Entry</h1>
   <?php if ($site): ?>
     <div class="entry-meta-toggle">
       <button type="button" id="entryMetaToggle" class="secondary" aria-expanded="true" aria-controls="entryMetaPanel">Hide Study Info</button>

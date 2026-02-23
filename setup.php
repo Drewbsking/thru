@@ -10,7 +10,6 @@ render_head('Site Setup');
 $setupCsrfToken = csrf_token();
 ?>
 <section class="card">
-  <h1>Site Setup</h1>
   <p class="small">Configure 2-3 checkpoints per site (or more), upload site image, define checkpoint distances, and control cut-through behavior. Recalculation uses latest settings immediately.</p>
 </section>
 

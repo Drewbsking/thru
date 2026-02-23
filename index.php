@@ -10,7 +10,6 @@ $activeId = current_site_id();
 render_head('Home');
 ?>
 <section class="hero card">
-  <h1>Home</h1>
   <p class="small">Start here so staff do not need to remember URLs. Pick the site, then launch checkpoint-specific data entry or view N-CAT analytics.</p>
   <div class="actions">
     <a class="btn" href="dashboard.php">Open N-CAT Dashboard</a>
