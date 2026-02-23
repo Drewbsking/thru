@@ -13,11 +13,13 @@ function render_head(string $title): void
 {
     $isLoggedIn = is_authenticated() || is_dashboard_viewer();
     $appName = 'N-CAT: Neighborhood Cut-through Analysis Tool';
+    $pageTitle = $appName . ' - ' . $title;
 
     echo '<!DOCTYPE html><html lang="en"><head>';
     echo '<meta charset="UTF-8">';
     echo '<meta name="viewport" content="width=device-width, initial-scale=1.0">';
-    echo '<title>' . h($appName . ' - ' . $title) . '</title>';
+    echo '<title>' . h($pageTitle) . '</title>';
+    echo '<script>document.title=' . json_encode($pageTitle, JSON_UNESCAPED_SLASHES) . ';</script>';
     echo '<link rel="stylesheet" href="assets/app.css">';
     echo '</head><body>';
     echo '<header class="topbar" id="appTopbar">';
