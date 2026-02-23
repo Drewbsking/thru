@@ -60,7 +60,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 <body>
   <main class="page" style="max-width: 460px; margin-top: 3rem;">
     <section class="card">
-      <h1>Login</h1>
+      <h1>Neighborhood Cut-through Analysis Tool (N-CAT)</h1>
+      <h2 style="margin-top:0.2rem;">Login</h2>
       <p class="small">Sign in with your username and password.</p>
       <form method="post">
         <input type="hidden" name="login_mode" value="account">

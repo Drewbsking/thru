@@ -12,6 +12,11 @@ $policyThreshold = (float)app_setting('policy_cut_through_percent', '25');
 render_head('About');
 ?>
 <section class="card">
+  <h1>Neighborhood Cut-through Analysis Tool (N-CAT)</h1>
+  <p class="small">Official tool name used for traffic study workflows and reporting.</p>
+</section>
+
+<section class="card" style="margin-top:1rem;">
   <h1>About Matching</h1>
   <p class="small">This page explains exactly how N-CAT matches vehicles and classifies traffic.</p>
   <p class="small">All times are Eastern Time (ET).</p>
@@ -85,4 +90,3 @@ render_head('About');
   </table>
 </section>
 <?php render_foot(); ?>
-

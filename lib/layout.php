@@ -24,7 +24,7 @@ function render_head(string $title): void
     echo '</head><body>';
     echo '<header class="topbar" id="appTopbar">';
     echo '<div class="topbar-row">';
-    echo '<div class="brand">' . h($title) . '</div>';
+    echo '<div class="brand">' . h('N-CAT - ' . $title) . '</div>';
     echo '<button type="button" class="nav-toggle" id="navToggle" aria-controls="siteNav" aria-expanded="false" aria-label="Toggle navigation menu">☰</button>';
     echo '</div>';
     echo '<nav class="nav" id="siteNav">';
