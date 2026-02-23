@@ -228,6 +228,7 @@ const checkpointSummaryLabel = document.getElementById('checkpointSummaryLabel')
 const recentEntriesLink = document.getElementById('recentEntriesLink');
 const entryMetaToggle = document.getElementById('entryMetaToggle');
 const entryMetaPanel = document.getElementById('entryMetaPanel');
+const isCoarsePointer = window.matchMedia('(pointer: coarse)').matches;
 
 function forceUppercaseInput(el) {
   if (!el) return;
@@ -237,6 +238,17 @@ function forceUppercaseInput(el) {
     el.value = (el.value || '').toUpperCase();
     if (start !== null && end !== null) {
       el.setSelectionRange(start, end);
+    }
+  });
+}
+
+function setupPlateAutoHideKeyboard() {
+  if (!plateInput || !isCoarsePointer) return;
+  plateInput.addEventListener('input', () => {
+    const value = (plateInput.value || '').trim();
+    if (value.length >= 3 && document.activeElement === plateInput) {
+      // Defer blur so the third key press is fully applied first.
+      setTimeout(() => plateInput.blur(), 0);
     }
   });
 }
@@ -397,6 +409,7 @@ if (plateInput) plateInput.addEventListener('input', clearPendingConfirm);
 if (notesInput) notesInput.addEventListener('input', clearPendingConfirm);
 forceUppercaseInput(plateInput);
 forceUppercaseInput(notesInput);
+setupPlateAutoHideKeyboard();
 
 function syncGreeting() {
   if (!greetingEl) return;
