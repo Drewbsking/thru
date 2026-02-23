@@ -4,11 +4,52 @@ declare(strict_types=1);
 
 require_once __DIR__ . '/lib/layout.php';
 
+require_admin_page();
+
 render_head('Site Setup');
+$setupCsrfToken = csrf_token();
 ?>
 <section class="card">
-  <h1>N-CAT Site Setup</h1>
+  <h1>Site Setup</h1>
   <p class="small">Configure 2-3 checkpoints per site (or more), upload site image, define checkpoint distances, and control cut-through behavior. Recalculation uses latest settings immediately.</p>
+</section>
+
+<section class="card" style="margin-top:1rem;">
+  <h2>Collectors + Checkpoint Access</h2>
+  <div class="grid two">
+    <article>
+      <h3>Create Collector Login</h3>
+      <form id="collectorForm">
+        <div class="form-row">
+          <div><label>Username</label><input id="collector_username" placeholder="jane.doe" required></div>
+          <div><label>Password</label><input id="collector_password" type="password" minlength="10" required></div>
+          <div><label>Confirm Password</label><input id="collector_password_confirm" type="password" minlength="10" required></div>
+        </div>
+        <button type="submit">Create Collector</button>
+      </form>
+      <p id="collectorStatus" class="status small"></p>
+      <table>
+        <thead><tr><th>Collector Username</th><th>Role</th></tr></thead>
+        <tbody id="collectorBody"></tbody>
+      </table>
+    </article>
+    <article>
+      <h3>Assign Collector to Checkpoint</h3>
+      <form id="assignmentForm">
+        <div class="form-row">
+          <div><label>Collector</label><select id="assign_user_id"></select></div>
+          <div><label>Site</label><select id="assign_site_id"></select></div>
+          <div><label>Checkpoint</label><select id="assign_checkpoint_id"></select></div>
+        </div>
+        <button type="submit">Save Assignment</button>
+      </form>
+      <p id="assignmentStatus" class="status small"></p>
+      <table>
+        <thead><tr><th>Collector</th><th>Site</th><th>Checkpoint</th><th>Action</th></tr></thead>
+        <tbody id="assignmentBody"></tbody>
+      </table>
+    </article>
+  </div>
 </section>
 
 <section class="grid two" style="margin-top:1rem;">
@@ -31,13 +72,13 @@ render_head('Site Setup');
     </form>
 
     <hr style="margin:1rem 0; border:0; border-top:1px solid #d8dde7;">
-    <h3>Access Password</h3>
+    <h3>Admin Password</h3>
     <form id="passwordForm">
       <div class="form-row">
-        <div><label>New Password</label><input id="new_password" type="password" minlength="10" required></div>
+        <div><label>New Password (Current Admin)</label><input id="new_password" type="password" minlength="10" required></div>
         <div><label>Confirm New Password</label><input id="confirm_new_password" type="password" minlength="10" required></div>
       </div>
-      <button type="submit" class="secondary">Update Password</button>
+      <button type="submit" class="secondary">Update Admin Password</button>
       <p id="passwordStatus" class="status small"></p>
     </form>
   </article>
@@ -117,10 +158,12 @@ render_head('Site Setup');
 let context = null;
 let distances = [];
 const setupSiteStorageKey = 'ncat_setup_selected_site_id';
+const setupCsrfToken = <?= json_encode($setupCsrfToken, JSON_UNESCAPED_SLASHES) ?>;
 
 async function post(action, extra = {}, file = null) {
   const fd = new FormData();
   fd.append('action', action);
+  fd.append('csrf_token', setupCsrfToken);
   for (const [k, v] of Object.entries(extra)) fd.append(k, v);
   if (file) fd.append('site_image', file);
   const res = await fetch('api/save_setup.php', { method: 'POST', body: fd });
@@ -221,6 +264,61 @@ function renderDistances() {
   });
 }
 
+function renderCollectorsAndAssignments() {
+  const collectors = (context.users || []).filter(u => u.role === 'collector' && Number(u.is_active) === 1);
+  const collectorBody = document.getElementById('collectorBody');
+  collectorBody.innerHTML = '';
+  collectors.forEach(u => {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `<td>${u.username}</td><td>${u.role}</td>`;
+    collectorBody.appendChild(tr);
+  });
+
+  const assignUser = document.getElementById('assign_user_id');
+  assignUser.innerHTML = '';
+  collectors.forEach(u => {
+    const opt = document.createElement('option');
+    opt.value = u.id;
+    opt.textContent = u.username;
+    assignUser.appendChild(opt);
+  });
+
+  const assignSite = document.getElementById('assign_site_id');
+  const currentSiteValue = assignSite.value;
+  assignSite.innerHTML = '';
+  (context.sites || []).forEach(s => {
+    const opt = document.createElement('option');
+    opt.value = s.id;
+    opt.textContent = s.name;
+    assignSite.appendChild(opt);
+  });
+  if (currentSiteValue) {
+    assignSite.value = currentSiteValue;
+  }
+  renderAssignmentCheckpointOptions();
+
+  const assignmentBody = document.getElementById('assignmentBody');
+  assignmentBody.innerHTML = '';
+  (context.assignments || []).forEach(a => {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `<td>${a.username}</td><td>${a.site_name}</td><td>${a.checkpoint_name} (${a.checkpoint_code})</td><td><button type="button" class="warn" data-del-assignment="${a.id}">Remove</button></td>`;
+    assignmentBody.appendChild(tr);
+  });
+}
+
+function renderAssignmentCheckpointOptions() {
+  const siteId = Number(document.getElementById('assign_site_id').value || 0);
+  const site = (context.sites || []).find(s => Number(s.id) === siteId);
+  const assignCheckpoint = document.getElementById('assign_checkpoint_id');
+  assignCheckpoint.innerHTML = '';
+  (site?.checkpoints || []).forEach(cp => {
+    const opt = document.createElement('option');
+    opt.value = cp.id;
+    opt.textContent = `${cp.display_name} (${cp.checkpoint_code})`;
+    assignCheckpoint.appendChild(opt);
+  });
+}
+
 async function loadContext() {
   const currentSelected = selectedSiteId();
   const storedSelected = getStoredSiteId();
@@ -239,6 +337,7 @@ async function loadContext() {
   renderCheckpoints();
   renderSiteImage();
   renderDistances();
+  renderCollectorsAndAssignments();
 }
 
 document.getElementById('sitePicker').addEventListener('change', () => {
@@ -283,6 +382,48 @@ document.getElementById('passwordForm').addEventListener('submit', async (e) => 
     document.getElementById('new_password').value = '';
     document.getElementById('confirm_new_password').value = '';
   }
+});
+
+document.getElementById('collectorForm').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const out = await post('create_collector', {
+    username: document.getElementById('collector_username').value,
+    password: document.getElementById('collector_password').value,
+    confirm_password: document.getElementById('collector_password_confirm').value,
+  });
+  document.getElementById('collectorStatus').textContent = out.ok ? 'Collector created.' : out.error;
+  document.getElementById('collectorStatus').className = out.ok ? 'status ok' : 'status warn';
+  if (out.ok) {
+    document.getElementById('collector_username').value = '';
+    document.getElementById('collector_password').value = '';
+    document.getElementById('collector_password_confirm').value = '';
+  }
+  await loadContext();
+});
+
+document.getElementById('assign_site_id').addEventListener('change', renderAssignmentCheckpointOptions);
+
+document.getElementById('assignmentForm').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const out = await post('assign_collector_checkpoint', {
+    user_id: document.getElementById('assign_user_id').value,
+    site_id: document.getElementById('assign_site_id').value,
+    checkpoint_id: document.getElementById('assign_checkpoint_id').value,
+  });
+  document.getElementById('assignmentStatus').textContent = out.ok ? 'Assignment saved.' : out.error;
+  document.getElementById('assignmentStatus').className = out.ok ? 'status ok' : 'status warn';
+  await loadContext();
+});
+
+document.getElementById('assignmentBody').addEventListener('click', async (e) => {
+  const target = e.target;
+  if (!(target instanceof HTMLElement) || !target.dataset.delAssignment) return;
+  const assignmentId = Number(target.dataset.delAssignment || 0);
+  if (!assignmentId) return;
+  const out = await post('remove_assignment', { assignment_id: assignmentId });
+  document.getElementById('assignmentStatus').textContent = out.ok ? 'Assignment removed.' : out.error;
+  document.getElementById('assignmentStatus').className = out.ok ? 'status ok' : 'status warn';
+  await loadContext();
 });
 
 document.getElementById('newSiteForm').addEventListener('submit', async (e) => {

@@ -9,6 +9,9 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     json_response(['ok' => false, 'error' => 'Method not allowed'], 405);
 }
 
+require_admin_api();
+require_csrf_api();
+
 action_router($_POST['action'] ?? '');
 
 function action_router(string $action): void
@@ -19,6 +22,15 @@ function action_router(string $action): void
             return;
         case 'save_auth_password':
             save_auth_password();
+            return;
+        case 'create_collector':
+            create_collector();
+            return;
+        case 'assign_collector_checkpoint':
+            assign_collector_checkpoint();
+            return;
+        case 'remove_assignment':
+            remove_assignment();
             return;
         case 'create_site':
             create_site();
@@ -72,7 +84,96 @@ function save_auth_password(): void
     }
 
     $hash = password_hash($password, PASSWORD_DEFAULT);
-    set_app_setting('auth_password_hash', $hash);
+    $userId = current_user_id();
+    $stmt = db_prepare('UPDATE users SET password_hash = ? WHERE id = ? LIMIT 1');
+    $stmt->bind_param('si', $hash, $userId);
+    $stmt->execute();
+    $stmt->close();
+    json_response(['ok' => true]);
+}
+
+function create_collector(): void
+{
+    $username = strtolower(trim((string)($_POST['username'] ?? '')));
+    $password = (string)($_POST['password'] ?? '');
+    $confirm = (string)($_POST['confirm_password'] ?? '');
+
+    if (!preg_match('/^[a-z0-9._-]{3,64}$/', $username)) {
+        json_response(['ok' => false, 'error' => 'Username must be 3-64 chars: letters, numbers, dot, underscore, hyphen.'], 422);
+    }
+    if (strlen($password) < 10) {
+        json_response(['ok' => false, 'error' => 'Password must be at least 10 characters.'], 422);
+    }
+    if ($password !== $confirm) {
+        json_response(['ok' => false, 'error' => 'Passwords do not match.'], 422);
+    }
+
+    $hash = password_hash($password, PASSWORD_DEFAULT);
+    $role = 'collector';
+    $stmt = db_prepare('INSERT INTO users (username, password_hash, role, is_active) VALUES (?, ?, ?, 1)');
+    $stmt->bind_param('sss', $username, $hash, $role);
+    $ok = false;
+    try {
+        $ok = $stmt->execute();
+    } catch (Throwable $e) {
+        $ok = false;
+    }
+    if (!$ok) {
+        $stmt->close();
+        json_response(['ok' => false, 'error' => 'Username already exists or could not be created.'], 422);
+    }
+    $userId = (int)$stmt->insert_id;
+    $stmt->close();
+
+    json_response(['ok' => true, 'user_id' => $userId]);
+}
+
+function assign_collector_checkpoint(): void
+{
+    $userId = (int)($_POST['user_id'] ?? 0);
+    $siteId = (int)($_POST['site_id'] ?? 0);
+    $checkpointId = (int)($_POST['checkpoint_id'] ?? 0);
+
+    if ($userId <= 0 || $siteId <= 0 || $checkpointId <= 0) {
+        json_response(['ok' => false, 'error' => 'User, site, and checkpoint are required.'], 422);
+    }
+
+    $roleStmt = db_prepare('SELECT role FROM users WHERE id = ? AND is_active = 1 LIMIT 1');
+    $roleStmt->bind_param('i', $userId);
+    $roleStmt->execute();
+    $user = $roleStmt->get_result()?->fetch_assoc();
+    $roleStmt->close();
+    if (!$user || (string)$user['role'] !== 'collector') {
+        json_response(['ok' => false, 'error' => 'Only collector users can be assigned.'], 422);
+    }
+
+    $cpStmt = db_prepare('SELECT id FROM checkpoints WHERE id = ? AND site_id = ? AND is_active = 1 LIMIT 1');
+    $cpStmt->bind_param('ii', $checkpointId, $siteId);
+    $cpStmt->execute();
+    $cp = $cpStmt->get_result()?->fetch_assoc();
+    $cpStmt->close();
+    if (!$cp) {
+        json_response(['ok' => false, 'error' => 'Invalid checkpoint for selected site.'], 422);
+    }
+
+    $stmt = db_prepare('INSERT INTO checkpoint_assignments (user_id, site_id, checkpoint_id, is_active) VALUES (?, ?, ?, 1) ON DUPLICATE KEY UPDATE is_active = 1, site_id = VALUES(site_id)');
+    $stmt->bind_param('iii', $userId, $siteId, $checkpointId);
+    $stmt->execute();
+    $stmt->close();
+
+    json_response(['ok' => true]);
+}
+
+function remove_assignment(): void
+{
+    $assignmentId = (int)($_POST['assignment_id'] ?? 0);
+    if ($assignmentId <= 0) {
+        json_response(['ok' => false, 'error' => 'Assignment id is required.'], 422);
+    }
+    $stmt = db_prepare('DELETE FROM checkpoint_assignments WHERE id = ? LIMIT 1');
+    $stmt->bind_param('i', $assignmentId);
+    $stmt->execute();
+    $stmt->close();
     json_response(['ok' => true]);
 }
 

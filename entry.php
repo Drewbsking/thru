@@ -4,29 +4,59 @@ declare(strict_types=1);
 
 require_once __DIR__ . '/lib/layout.php';
 
-$siteId = (int)($_GET['site_id'] ?? current_site_id());
+$isAdmin = is_admin();
+$scopedSites = scoped_sites_for_current_user();
+$defaultSiteId = count($scopedSites) > 0 ? (int)$scopedSites[0]['id'] : current_site_id();
+$siteId = (int)($_GET['site_id'] ?? $defaultSiteId);
 if ($siteId <= 0) {
-    $siteId = current_site_id();
+    $siteId = $defaultSiteId;
 }
+$isCheckpointLocked = isset($_GET['checkpoint_id']) && (int)($_GET['checkpoint_id']) > 0;
 $checkpointId = (int)($_GET['checkpoint_id'] ?? 0);
-$site = site_by_id($siteId);
-$checkpoints = $site ? checkpoints_for_site($siteId) : [];
-$initialCollectorName = '';
+$site = null;
+foreach ($scopedSites as $s) {
+    if ((int)$s['id'] === $siteId) {
+        $site = $s;
+        break;
+    }
+}
+if (!$site && count($scopedSites) > 0) {
+    $site = $scopedSites[0];
+    $siteId = (int)$site['id'];
+}
+$checkpoints = $site ? ($site['checkpoints'] ?? []) : [];
 if ($checkpointId > 0) {
+    $allowed = false;
     foreach ($checkpoints as $cp) {
         if ((int)$cp['id'] === $checkpointId) {
-            $initialCollectorName = (string)($cp['collector_name'] ?? '');
+            $allowed = true;
             break;
         }
     }
+    if (!$allowed) {
+        $checkpointId = (int)($checkpoints[0]['id'] ?? 0);
+    }
 } elseif (count($checkpoints) > 0) {
+    $checkpointId = (int)$checkpoints[0]['id'];
+}
+$initialCollectorName = !$isAdmin ? current_username() : '';
+if ($checkpointId > 0) {
+    foreach ($checkpoints as $cp) {
+        if ((int)$cp['id'] === $checkpointId) {
+            if ($isAdmin) {
+                $initialCollectorName = (string)($cp['collector_name'] ?? '');
+            }
+            break;
+        }
+    }
+} elseif ($isAdmin && count($checkpoints) > 0) {
     $initialCollectorName = (string)($checkpoints[0]['collector_name'] ?? '');
 }
 
 render_head('Data Entry');
 ?>
 <section class="card entry-compact">
-  <h1>N-CAT Data Entry</h1>
+  <h1>Data Entry</h1>
   <?php if ($site): ?>
     <p id="entryGreeting" class="status ok">You are recording at <?= h((string)$site['name']) ?>.</p>
   <?php endif; ?>
@@ -35,20 +65,20 @@ render_head('Data Entry');
   <p class="small">Checkpoint can be locked by link. This prevents wrong checkpoint tagging when different observers are logging traffic. Studies are typically short roadside sessions (around 2 hours).</p>
 
   <?php if (!$site): ?>
-    <p class="status warn">No active site found. Configure a site first in <a href="setup.php">Site Setup</a>.</p>
+    <p class="status warn"><?= $isAdmin ? 'No active site found. Configure a site first in Site Setup.' : 'No checkpoint assignment found for your account. Ask an admin to assign your checkpoint.' ?></p>
   <?php else: ?>
     <div class="form-row">
       <div>
         <label>Site</label>
-        <select id="site_id" <?= $checkpointId > 0 ? 'disabled' : '' ?>>
-          <?php foreach (all_sites() as $s): ?>
+        <select id="site_id" <?= $isCheckpointLocked ? 'disabled' : '' ?>>
+          <?php foreach ($scopedSites as $s): ?>
             <option value="<?= (int)$s['id'] ?>" <?= (int)$s['id'] === $siteId ? 'selected' : '' ?>><?= h($s['name']) ?></option>
           <?php endforeach; ?>
         </select>
       </div>
       <div>
         <label>Checkpoint</label>
-        <select id="checkpoint_id" <?= $checkpointId > 0 ? 'disabled' : '' ?>>
+        <select id="checkpoint_id" <?= $isCheckpointLocked ? 'disabled' : '' ?>>
           <?php foreach ($checkpoints as $cp): ?>
             <option value="<?= (int)$cp['id'] ?>" <?= (int)$cp['id'] === $checkpointId ? 'selected' : '' ?>>
               <?= h($cp['display_name']) ?> (<?= h($cp['checkpoint_code']) ?>)
@@ -66,7 +96,7 @@ render_head('Data Entry');
         </div>
         <div>
           <label>Data Collector</label>
-          <input id="collector_name_display" value="<?= h($initialCollectorName !== '' ? $initialCollectorName : 'Not set on this checkpoint in Site Setup') ?>" readonly>
+          <input id="collector_name_display" value="<?= h($initialCollectorName !== '' ? $initialCollectorName : ($isAdmin ? 'Not set on this checkpoint in Site Setup' : current_username())) ?>" readonly>
         </div>
       </div>
 
@@ -131,7 +161,9 @@ render_head('Data Entry');
 </section>
 
 <script>
-const lockedCheckpoint = <?= $checkpointId > 0 ? 'true' : 'false' ?>;
+const lockedCheckpoint = <?= $isCheckpointLocked ? 'true' : 'false' ?>;
+const isAdminUser = <?= $isAdmin ? 'true' : 'false' ?>;
+const currentUsername = <?= json_encode(current_username(), JSON_UNESCAPED_SLASHES) ?>;
 const initialSiteId = <?= (int)$siteId ?>;
 const initialCheckpointId = <?= (int)$checkpointId ?>;
 let collectorName = <?= json_encode($initialCollectorName, JSON_UNESCAPED_SLASHES) ?>;
@@ -260,6 +292,13 @@ forceUppercaseInput(notesInput);
 
 function syncCollectorForSelectedCheckpoint() {
   if (!cpInput) return;
+  if (!isAdminUser) {
+    collectorName = currentUsername;
+    if (collectorDisplay) {
+      collectorDisplay.value = currentUsername;
+    }
+    return;
+  }
   const selectedCheckpointId = Number(cpInput.value || 0);
   const selectedCheckpoint = currentCheckpoints.find(cp => Number(cp.id) === selectedCheckpointId);
   collectorName = selectedCheckpoint && selectedCheckpoint.collector_name ? selectedCheckpoint.collector_name : '';

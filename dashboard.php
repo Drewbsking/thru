@@ -9,7 +9,7 @@ $sites = all_sites();
 render_head('Dashboard');
 ?>
 <section class="card">
-  <h1>N-CAT Dashboard</h1>
+  <h1>Dashboard</h1>
   <p class="small">Auto-refreshes every <span id="pollLabel">10</span> seconds. Cut-through is calculated with expected travel time from checkpoint distance and speed setting.</p>
   <div class="form-row">
     <div>

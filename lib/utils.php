@@ -122,17 +122,3 @@ function current_study_period(): string
     $hour = (int)date('H');
     return $hour < 12 ? 'morning' : 'afternoon';
 }
-
-function active_study_session_id(int $siteId, ?string $studyPeriod = null): ?int
-{
-    $studyPeriod = $studyPeriod ?: current_study_period();
-    $stmt = db_prepare('SELECT id FROM study_sessions WHERE site_id = ? AND study_period = ? AND status = \'active\' ORDER BY id DESC LIMIT 1');
-    $stmt->bind_param('is', $siteId, $studyPeriod);
-    $stmt->execute();
-    $row = $stmt->get_result()?->fetch_assoc();
-    $stmt->close();
-    if (!$row) {
-        return null;
-    }
-    return (int)$row['id'];
-}

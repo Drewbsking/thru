@@ -15,10 +15,14 @@ $plateRaw = trim((string)($_POST['plate'] ?? ''));
 $vehicleType = trim((string)($_POST['vehicle_type'] ?? ''));
 $vehicleColor = trim((string)($_POST['vehicle_color'] ?? ''));
 $notes = trim((string)($_POST['notes'] ?? ''));
-$observer = trim((string)($_POST['observer_name'] ?? ''));
+$observer = current_username();
+$userId = current_user_id();
 
 if ($siteId <= 0 || $checkpointId <= 0 || $vehicleType === '' || $vehicleColor === '') {
     json_response(['ok' => false, 'error' => 'Missing required fields.'], 422);
+}
+if (!can_access_checkpoint($siteId, $checkpointId)) {
+    json_response(['ok' => false, 'error' => 'Not authorized for this checkpoint.'], 403);
 }
 
 // Event time is always server-side save timestamp.
@@ -26,8 +30,6 @@ $eventTime = date('Y-m-d H:i:s');
 
 $plateRaw = normalize_plate($plateRaw);
 $plateNorm = $plateRaw;
-$studySessionId = active_study_session_id($siteId);
-$studySessionIdParam = $studySessionId ?? 0;
 
 $checkStmt = db_prepare('SELECT c.id FROM checkpoints c WHERE c.id = ? AND c.site_id = ? AND c.is_active = 1 LIMIT 1');
 $checkStmt->bind_param('ii', $checkpointId, $siteId);
@@ -39,8 +41,8 @@ if (!$exists) {
     json_response(['ok' => false, 'error' => 'Invalid site/checkpoint.'], 422);
 }
 
-$insert = db_prepare('INSERT INTO traffic_events (site_id, checkpoint_id, study_session_id, direction, plate_raw, plate_norm, vehicle_type, vehicle_color, notes, observer_name, event_time) VALUES (?, ?, NULLIF(?, 0), ?, ?, ?, ?, ?, ?, ?, ?)');
-$insert->bind_param('iiissssssss', $siteId, $checkpointId, $studySessionIdParam, $direction, $plateRaw, $plateNorm, $vehicleType, $vehicleColor, $notes, $observer, $eventTime);
+$insert = db_prepare('INSERT INTO traffic_events (site_id, checkpoint_id, user_id, direction, plate_raw, plate_norm, vehicle_type, vehicle_color, notes, observer_name, event_time) VALUES (?, ?, NULLIF(?, 0), ?, ?, ?, ?, ?, ?, ?, ?)');
+$insert->bind_param('iiissssssss', $siteId, $checkpointId, $userId, $direction, $plateRaw, $plateNorm, $vehicleType, $vehicleColor, $notes, $observer, $eventTime);
 $ok = $insert->execute();
 $newId = $insert->insert_id;
 $insert->close();
@@ -49,4 +51,4 @@ if (!$ok) {
     json_response(['ok' => false, 'error' => 'Failed to save event.'], 500);
 }
 
-json_response(['ok' => true, 'id' => $newId, 'event_time' => $eventTime, 'study_session_id' => $studySessionId]);
+json_response(['ok' => true, 'id' => $newId, 'event_time' => $eventTime]);

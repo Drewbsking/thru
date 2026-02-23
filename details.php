@@ -9,7 +9,7 @@ $siteId = (int)($_GET['site_id'] ?? current_site_id());
 render_head('Cut-Through Details');
 ?>
 <section class="card">
-  <h1>N-CAT Cut-Through Details</h1>
+  <h1>Cut-Through Details</h1>
   <p class="small">High confidence matches are paired one-to-one. Unmatched In events are treated as local arrivals, unmatched Out events as local departures.</p>
   <div class="form-row">
     <div>

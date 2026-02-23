@@ -16,6 +16,22 @@ $checkpointId = (int)($_POST['checkpoint_id'] ?? 0);
 if ($eventId <= 0 || $siteId <= 0 || $checkpointId <= 0) {
     json_response(['ok' => false, 'error' => 'Missing ids.'], 422);
 }
+if (!can_access_checkpoint($siteId, $checkpointId)) {
+    json_response(['ok' => false, 'error' => 'Not authorized for this checkpoint.'], 403);
+}
+
+$eventStmt = db_prepare('SELECT id, user_id FROM traffic_events WHERE id = ? AND site_id = ? AND checkpoint_id = ? LIMIT 1');
+$eventStmt->bind_param('iii', $eventId, $siteId, $checkpointId);
+$eventStmt->execute();
+$eventRow = $eventStmt->get_result()?->fetch_assoc();
+$eventStmt->close();
+if (!$eventRow) {
+    json_response(['ok' => false, 'error' => 'Event not found.'], 404);
+}
+$eventUserId = (int)($eventRow['user_id'] ?? 0);
+if (!can_modify_event($eventUserId)) {
+    json_response(['ok' => false, 'error' => 'You can only edit your own events.'], 403);
+}
 
 if ($action === 'delete') {
     $stmt = db_prepare('DELETE FROM traffic_events WHERE id = ? AND site_id = ? AND checkpoint_id = ? LIMIT 1');

@@ -4,13 +4,13 @@ declare(strict_types=1);
 
 require_once __DIR__ . '/lib/layout.php';
 
-$sites = all_sites();
+$sites = scoped_sites_for_current_user();
 $activeId = current_site_id();
 
 render_head('Home');
 ?>
 <section class="hero card">
-  <h1>N-CAT Home</h1>
+  <h1>Home</h1>
   <p class="small">Start here so staff do not need to remember URLs. Pick the site, then launch checkpoint-specific data entry or view N-CAT analytics.</p>
   <div class="actions">
     <a class="btn" href="dashboard.php">Open N-CAT Dashboard</a>
@@ -20,16 +20,19 @@ render_head('Home');
 </section>
 
 <section class="grid two" style="margin-top:1rem;">
+  <?php if (count($sites) === 0): ?>
+    <article class="card">
+      <h2>No Checkpoint Assignment</h2>
+      <p class="small">Your account is not assigned to any checkpoint yet. Ask an admin to assign you in Site Setup.</p>
+    </article>
+  <?php endif; ?>
   <?php foreach ($sites as $site): ?>
     <article class="card">
       <h2><?= h($site['name']) ?><?= (int)$site['id'] === $activeId ? ' (Active)' : '' ?></h2>
       <p class="small">Site ID <?= (int)$site['id'] ?>. Use checkpoint links below for locked data entry.</p>
-      <div class="actions">
-        <a class="btn secondary" href="entry.php?site_id=<?= (int)$site['id'] ?>">Open N-CAT Data Entry</a>
-      </div>
       <div class="small" style="margin-top:0.6rem;">Checkpoint Quick Links:</div>
       <div class="actions">
-      <?php foreach (checkpoints_for_site((int)$site['id']) as $cp): ?>
+      <?php foreach (($site['checkpoints'] ?? []) as $cp): ?>
         <a class="btn" href="entry.php?site_id=<?= (int)$site['id'] ?>&checkpoint_id=<?= (int)$cp['id'] ?>">
           <?= h($cp['display_name']) ?>
         </a>

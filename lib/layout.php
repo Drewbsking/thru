@@ -22,9 +22,10 @@ function render_head(string $title): void
     echo '<nav class="nav">';
     echo '<a href="index.php">Home</a>';
     echo '<a href="dashboard.php">Dashboard</a>';
-    echo '<a href="entry.php">Data Entry</a>';
     echo '<a href="details.php">Cut-Through Details</a>';
-    echo '<a href="setup.php">Site Setup</a>';
+    if (is_admin()) {
+        echo '<a href="setup.php">Site Setup</a>';
+    }
     echo '<a href="logout.php">Logout</a>';
     echo '</nav></header>';
     echo '<main class="page">';

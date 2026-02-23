@@ -11,6 +11,16 @@ CREATE TABLE IF NOT EXISTS sites (
   created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+CREATE TABLE IF NOT EXISTS users (
+  id INT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  username VARCHAR(64) NOT NULL,
+  password_hash VARCHAR(255) NOT NULL,
+  role ENUM('admin', 'collector') NOT NULL DEFAULT 'collector',
+  is_active TINYINT(1) NOT NULL DEFAULT 1,
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE KEY uniq_username (username)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 CREATE TABLE IF NOT EXISTS checkpoints (
   id INT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
   site_id INT UNSIGNED NOT NULL,
@@ -40,7 +50,7 @@ CREATE TABLE IF NOT EXISTS traffic_events (
   id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
   site_id INT UNSIGNED NOT NULL,
   checkpoint_id INT UNSIGNED NOT NULL,
-  study_session_id BIGINT UNSIGNED NULL,
+  user_id INT UNSIGNED NULL,
   direction ENUM('In', 'Out') NOT NULL,
   plate_raw VARCHAR(32) NULL,
   plate_norm VARCHAR(32) NULL,
@@ -53,19 +63,22 @@ CREATE TABLE IF NOT EXISTS traffic_events (
   KEY idx_event_time (event_time),
   KEY idx_site_time (site_id, event_time),
   KEY idx_plate_norm (plate_norm),
-  KEY idx_study_session_id (study_session_id),
+  KEY idx_user_id (user_id),
   CONSTRAINT fk_event_site FOREIGN KEY (site_id) REFERENCES sites(id) ON DELETE CASCADE,
-  CONSTRAINT fk_event_checkpoint FOREIGN KEY (checkpoint_id) REFERENCES checkpoints(id) ON DELETE CASCADE
+  CONSTRAINT fk_event_checkpoint FOREIGN KEY (checkpoint_id) REFERENCES checkpoints(id) ON DELETE CASCADE,
+  CONSTRAINT fk_event_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
-CREATE TABLE IF NOT EXISTS study_sessions (
+CREATE TABLE IF NOT EXISTS checkpoint_assignments (
   id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  user_id INT UNSIGNED NOT NULL,
   site_id INT UNSIGNED NOT NULL,
-  study_period ENUM('morning', 'afternoon') NOT NULL,
-  status ENUM('active', 'ended') NOT NULL DEFAULT 'active',
-  started_at DATETIME NOT NULL,
-  ended_at DATETIME NULL,
+  checkpoint_id INT UNSIGNED NOT NULL,
+  is_active TINYINT(1) NOT NULL DEFAULT 1,
   created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  KEY idx_site_period_status (site_id, study_period, status),
-  CONSTRAINT fk_study_site FOREIGN KEY (site_id) REFERENCES sites(id) ON DELETE CASCADE
+  UNIQUE KEY uniq_user_checkpoint (user_id, checkpoint_id),
+  KEY idx_assignment_site_checkpoint (site_id, checkpoint_id),
+  CONSTRAINT fk_assignment_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+  CONSTRAINT fk_assignment_site FOREIGN KEY (site_id) REFERENCES sites(id) ON DELETE CASCADE,
+  CONSTRAINT fk_assignment_checkpoint FOREIGN KEY (checkpoint_id) REFERENCES checkpoints(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

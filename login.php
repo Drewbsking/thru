@@ -21,12 +21,13 @@ if ($next === '' || str_starts_with($next, 'http://') || str_starts_with($next, 
 }
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    $username = trim((string)($_POST['username'] ?? ''));
     $password = (string)($_POST['password'] ?? '');
-    if (login_with_password($password)) {
+    if (login_with_credentials($username, $password)) {
         header('Location: ' . $next, true, 302);
         exit;
     }
-    $error = 'Invalid password.';
+    $error = 'Invalid username or password.';
 }
 ?>
 <!DOCTYPE html>
@@ -40,10 +41,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 <body>
   <main class="page" style="max-width: 460px; margin-top: 3rem;">
     <section class="card">
-      <h1>N-CAT Login</h1>
-      <p class="small">Enter the N-CAT password to continue.</p>
+      <h1>Login</h1>
+      <p class="small">Sign in with your username and password.</p>
       <form method="post">
         <input type="hidden" name="next" value="<?= h($next) ?>">
+        <label>Username</label>
+        <input type="text" name="username" autocomplete="username" required>
         <label>Password</label>
         <input type="password" name="password" autocomplete="current-password" required>
         <div class="actions">
@@ -53,7 +56,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
       <?php if ($error !== ''): ?>
         <p class="status warn"><?= h($error) ?></p>
       <?php endif; ?>
-      <p class="small" style="margin-top:0.8rem;">Default password is <code class="inline">change-me-now</code> unless `THRU_APP_PASSWORD` is set. Change it in Site Setup after login.</p>
+      <p class="small" style="margin-top:0.8rem;">Use your assigned account. Contact an admin if you need access.</p>
     </section>
   </main>
 </body>

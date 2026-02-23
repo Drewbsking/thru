@@ -19,6 +19,16 @@ function ensure_schema(): void
         created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
 
+    db_exec("CREATE TABLE IF NOT EXISTS users (
+        id INT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+        username VARCHAR(64) NOT NULL,
+        password_hash VARCHAR(255) NOT NULL,
+        role ENUM('admin', 'collector') NOT NULL DEFAULT 'collector',
+        is_active TINYINT(1) NOT NULL DEFAULT 1,
+        created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        UNIQUE KEY uniq_username (username)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+
     db_exec("CREATE TABLE IF NOT EXISTS checkpoints (
         id INT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
         site_id INT UNSIGNED NOT NULL,
@@ -53,7 +63,7 @@ function ensure_schema(): void
         id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
         site_id INT UNSIGNED NOT NULL,
         checkpoint_id INT UNSIGNED NOT NULL,
-        study_session_id BIGINT UNSIGNED NULL,
+        user_id INT UNSIGNED NULL,
         direction ENUM('In', 'Out') NOT NULL,
         plate_raw VARCHAR(32) NULL,
         plate_norm VARCHAR(32) NULL,
@@ -66,27 +76,38 @@ function ensure_schema(): void
         KEY idx_event_time (event_time),
         KEY idx_site_time (site_id, event_time),
         KEY idx_plate_norm (plate_norm),
-        KEY idx_study_session_id (study_session_id),
+        KEY idx_user_id (user_id),
         CONSTRAINT fk_event_site FOREIGN KEY (site_id) REFERENCES sites(id) ON DELETE CASCADE,
-        CONSTRAINT fk_event_checkpoint FOREIGN KEY (checkpoint_id) REFERENCES checkpoints(id) ON DELETE CASCADE
+        CONSTRAINT fk_event_checkpoint FOREIGN KEY (checkpoint_id) REFERENCES checkpoints(id) ON DELETE CASCADE,
+        CONSTRAINT fk_event_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
 
-    $sessionColRes = db()->query("SHOW COLUMNS FROM traffic_events LIKE 'study_session_id'");
-    if ($sessionColRes && $sessionColRes->num_rows === 0) {
-        db_exec("ALTER TABLE traffic_events ADD COLUMN study_session_id BIGINT UNSIGNED NULL AFTER checkpoint_id");
-        db_exec("ALTER TABLE traffic_events ADD KEY idx_study_session_id (study_session_id)");
+    $eventUserColRes = db()->query("SHOW COLUMNS FROM traffic_events LIKE 'user_id'");
+    if ($eventUserColRes && $eventUserColRes->num_rows === 0) {
+        db_exec("ALTER TABLE traffic_events ADD COLUMN user_id INT UNSIGNED NULL AFTER checkpoint_id");
+        db_exec("ALTER TABLE traffic_events ADD KEY idx_user_id (user_id)");
+        db_exec("ALTER TABLE traffic_events ADD CONSTRAINT fk_event_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL");
     }
 
-    db_exec("CREATE TABLE IF NOT EXISTS study_sessions (
+    $legacySessionColRes = db()->query("SHOW COLUMNS FROM traffic_events LIKE 'study_session_id'");
+    if ($legacySessionColRes && $legacySessionColRes->num_rows > 0) {
+        db_exec("ALTER TABLE traffic_events DROP COLUMN study_session_id");
+    }
+
+    db_exec("DROP TABLE IF EXISTS study_sessions");
+
+    db_exec("CREATE TABLE IF NOT EXISTS checkpoint_assignments (
         id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+        user_id INT UNSIGNED NOT NULL,
         site_id INT UNSIGNED NOT NULL,
-        study_period ENUM('morning', 'afternoon') NOT NULL,
-        status ENUM('active', 'ended') NOT NULL DEFAULT 'active',
-        started_at DATETIME NOT NULL,
-        ended_at DATETIME NULL,
+        checkpoint_id INT UNSIGNED NOT NULL,
+        is_active TINYINT(1) NOT NULL DEFAULT 1,
         created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-        KEY idx_site_period_status (site_id, study_period, status),
-        CONSTRAINT fk_study_site FOREIGN KEY (site_id) REFERENCES sites(id) ON DELETE CASCADE
+        UNIQUE KEY uniq_user_checkpoint (user_id, checkpoint_id),
+        KEY idx_assignment_site_checkpoint (site_id, checkpoint_id),
+        CONSTRAINT fk_assignment_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+        CONSTRAINT fk_assignment_site FOREIGN KEY (site_id) REFERENCES sites(id) ON DELETE CASCADE,
+        CONSTRAINT fk_assignment_checkpoint FOREIGN KEY (checkpoint_id) REFERENCES checkpoints(id) ON DELETE CASCADE
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
 
     seed_defaults();
@@ -94,8 +115,9 @@ function ensure_schema(): void
 
 function seed_defaults(): void
 {
-    $initialPassword = getenv('THRU_APP_PASSWORD') ?: 'change-me-now';
-    $initialHash = password_hash($initialPassword, PASSWORD_DEFAULT);
+    $initialAdminUser = getenv('THRU_APP_ADMIN_USER') ?: 'admin';
+    $initialAdminPassword = getenv('THRU_APP_ADMIN_PASSWORD') ?: 'T-CAT2026';
+    $initialAdminHash = password_hash($initialAdminPassword, PASSWORD_DEFAULT);
 
     $defaults = [
         'speed_mph' => '25',
@@ -103,7 +125,6 @@ function seed_defaults(): void
         'min_confidence' => '70',
         'poll_seconds' => '10',
         'policy_cut_through_percent' => '25',
-        'auth_password_hash' => $initialHash,
     ];
 
     $stmt = db_prepare('INSERT INTO app_settings (setting_key, setting_value) VALUES (?, ?) ON DUPLICATE KEY UPDATE setting_value = setting_value');
@@ -112,6 +133,12 @@ function seed_defaults(): void
         $stmt->execute();
     }
     $stmt->close();
+
+    $adminRole = 'admin';
+    $userStmt = db_prepare('INSERT INTO users (username, password_hash, role, is_active) VALUES (?, ?, ?, 1) ON DUPLICATE KEY UPDATE id = id');
+    $userStmt->bind_param('sss', $initialAdminUser, $initialAdminHash, $adminRole);
+    $userStmt->execute();
+    $userStmt->close();
 
     $res = db()->query('SELECT COUNT(*) AS c FROM sites');
     $count = (int)($res->fetch_assoc()['c'] ?? 0);

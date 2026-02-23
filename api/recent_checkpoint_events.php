@@ -11,6 +11,9 @@ $limit = max(1, min(10, (int)($_GET['limit'] ?? 5)));
 if ($siteId <= 0 || $checkpointId <= 0) {
     json_response(['ok' => false, 'error' => 'Site and checkpoint are required.'], 422);
 }
+if (!can_access_checkpoint($siteId, $checkpointId)) {
+    json_response(['ok' => false, 'error' => 'Not authorized for this checkpoint.'], 403);
+}
 
 $sql = "SELECT id, event_time, direction, plate_raw, vehicle_type, vehicle_color, notes
         FROM traffic_events
