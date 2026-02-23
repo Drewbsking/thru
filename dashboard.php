@@ -4,22 +4,18 @@ declare(strict_types=1);
 
 require_once __DIR__ . '/lib/layout.php';
 
-$siteId = (int)($_GET['site_id'] ?? current_site_id());
-$sites = all_sites();
+$siteId = current_site_id();
+$activeSite = $siteId > 0 ? site_by_id($siteId) : null;
 render_head('Dashboard');
 ?>
 <section class="card">
   <h1>Dashboard</h1>
   <p class="small">Auto-refreshes every <span id="pollLabel">10</span> seconds. Cut-through is calculated with expected travel time from checkpoint distance and speed setting.</p>
+  <?php if (!$activeSite): ?>
+    <p class="status warn">No active site is configured. Set one in Site Setup.</p>
+  <?php else: ?>
+  <p class="small"><strong>Active Site:</strong> <?= h((string)$activeSite['name']) ?></p>
   <div class="form-row">
-    <div>
-      <label>Site</label>
-      <select id="site_id">
-        <?php foreach ($sites as $s): ?>
-          <option value="<?= (int)$s['id'] ?>" <?= (int)$s['id'] === $siteId ? 'selected' : '' ?>><?= h($s['name']) ?></option>
-        <?php endforeach; ?>
-      </select>
-    </div>
     <div>
       <label>Study Period</label>
       <select id="study_period">
@@ -32,6 +28,18 @@ render_head('Dashboard');
       <button id="refreshBtn" type="button">Refresh Now</button>
     </div>
   </div>
+  <div class="card" style="margin-top:0.75rem; padding:0.75rem;">
+    <h2 style="margin-bottom:0.4rem;">Selected Site</h2>
+    <p class="small" id="siteCardName" style="margin-top:0;"><?= h((string)$activeSite['name']) ?></p>
+    <?php if (!empty($activeSite['image_path'])): ?>
+      <img id="siteCardImage" class="site-preview" alt="Selected site image" src="<?= h((string)$activeSite['image_path']) ?>">
+      <p class="small" id="siteCardNoImage" style="display:none; margin-top:0.55rem;">No site image uploaded for this site yet.</p>
+    <?php else: ?>
+      <img id="siteCardImage" class="site-preview" alt="Selected site image" style="display:none;">
+      <p class="small" id="siteCardNoImage" style="margin-top:0.55rem;">No site image uploaded for this site yet.</p>
+    <?php endif; ?>
+  </div>
+  <?php endif; ?>
 </section>
 
 <section class="grid three" style="margin-top:1rem;" id="kpis"></section>
@@ -64,6 +72,9 @@ render_head('Dashboard');
 <script>
 let pollMs = 10000;
 let timer;
+const activeSiteId = <?= (int)$siteId ?>;
+const refreshBtn = document.getElementById('refreshBtn');
+const studyPeriodSelect = document.getElementById('study_period');
 
 function currentStudyPeriod() {
   return (new Date().getHours() < 12) ? 'morning' : 'afternoon';
@@ -74,9 +85,9 @@ function kpiCard(label, value, css='') {
 }
 
 async function loadDashboard() {
-  const siteId = document.getElementById('site_id').value;
-  const studyPeriod = document.getElementById('study_period').value;
-  const res = await fetch(`api/dashboard_data.php?site_id=${siteId}&study_period=${studyPeriod}`);
+  if (!activeSiteId || !studyPeriodSelect) return;
+  const studyPeriod = studyPeriodSelect.value;
+  const res = await fetch(`api/dashboard_data.php?site_id=${activeSiteId}&study_period=${studyPeriod}`);
   const json = await res.json();
   if (!json.ok) return;
 
@@ -139,10 +150,11 @@ async function loadDashboard() {
   timer = setTimeout(loadDashboard, pollMs);
 }
 
-document.getElementById('refreshBtn').addEventListener('click', loadDashboard);
-document.getElementById('site_id').addEventListener('change', loadDashboard);
-document.getElementById('study_period').addEventListener('change', loadDashboard);
-document.getElementById('study_period').value = currentStudyPeriod();
+if (refreshBtn) refreshBtn.addEventListener('click', loadDashboard);
+if (studyPeriodSelect) {
+  studyPeriodSelect.addEventListener('change', loadDashboard);
+  studyPeriodSelect.value = currentStudyPeriod();
+}
 loadDashboard();
 </script>
 <?php render_foot(); ?>
