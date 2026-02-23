@@ -343,7 +343,7 @@ function currentEntrySignature() {
     selectedRadioValue('direction') || 'In',
     (plateInput ? plateInput.value.trim().toUpperCase() : ''),
     selectedRadioValue('vehicle_type'),
-    selectedVehicleColor().toUpperCase()
+    selectedVehicleColor()
   ].join('|');
 }
 
@@ -641,7 +641,7 @@ if (form) {
     payload.append('direction', selectedRadioValue('direction') || 'In');
     payload.append('plate', (document.getElementById('plate').value || '').toUpperCase());
     payload.append('vehicle_type', vehicleType);
-    payload.append('vehicle_color', (vehicleColor || '').toUpperCase());
+    payload.append('vehicle_color', vehicleColor);
     payload.append('observer_name', collectorName);
     payload.append('notes', (document.getElementById('notes').value || '').toUpperCase());
 

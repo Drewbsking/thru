@@ -22,6 +22,24 @@ if (!can_access_checkpoint($siteId, $checkpointId)) {
     json_response(['ok' => false, 'error' => 'Not authorized for this checkpoint.'], 403);
 }
 
+$allowedTypes = ['Sedan', 'SUV', 'Pickup Truck', 'Truck', 'Minivan', 'Motorcycle', 'Other', 'Trailer', 'Trailer/Motorcycle'];
+$allowedColors = ['White', 'Black/Blue', 'Gray/Silver', 'Red', 'Green', 'Other'];
+$typeMap = [];
+foreach ($allowedTypes as $type) {
+    $typeMap[strtolower($type)] = $type;
+}
+$colorMap = [];
+foreach ($allowedColors as $color) {
+    $colorMap[strtolower($color)] = $color;
+}
+$typeKey = strtolower($vehicleType);
+$colorKey = strtolower($vehicleColor);
+if (!isset($typeMap[$typeKey]) || !isset($colorMap[$colorKey])) {
+    json_response(['ok' => false, 'error' => 'Invalid vehicle type or color.'], 422);
+}
+$vehicleType = $typeMap[$typeKey];
+$vehicleColor = $colorMap[$colorKey];
+
 $threshold = date('Y-m-d H:i:s', time() - 20);
 $stmt = db_prepare('SELECT id, event_time, plate_raw FROM traffic_events WHERE site_id = ? AND checkpoint_id = ? AND direction = ? AND vehicle_type = ? AND vehicle_color = ? AND event_time >= ? ORDER BY id DESC LIMIT 1');
 $stmt->bind_param('iissss', $siteId, $checkpointId, $direction, $vehicleType, $vehicleColor, $threshold);

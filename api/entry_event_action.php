@@ -51,12 +51,25 @@ if ($action === 'edit') {
 
     $allowedTypes = ['Sedan', 'SUV', 'Pickup Truck', 'Truck', 'Minivan', 'Motorcycle', 'Other', 'Trailer', 'Trailer/Motorcycle'];
     $allowedColors = ['White', 'Black/Blue', 'Gray/Silver', 'Red', 'Green', 'Other'];
-    if (!in_array($vehicleType, $allowedTypes, true)) {
+    // Accept case-insensitive values from clients and store canonical labels.
+    $typeMap = [];
+    foreach ($allowedTypes as $type) {
+        $typeMap[strtolower($type)] = $type;
+    }
+    $colorMap = [];
+    foreach ($allowedColors as $color) {
+        $colorMap[strtolower($color)] = $color;
+    }
+    $typeKey = strtolower($vehicleType);
+    $colorKey = strtolower($vehicleColor);
+    if (!isset($typeMap[$typeKey])) {
         json_response(['ok' => false, 'error' => 'Invalid vehicle type.'], 422);
     }
-    if (!in_array($vehicleColor, $allowedColors, true)) {
+    if (!isset($colorMap[$colorKey])) {
         json_response(['ok' => false, 'error' => 'Invalid vehicle color.'], 422);
     }
+    $vehicleType = $typeMap[$typeKey];
+    $vehicleColor = $colorMap[$colorKey];
 
     $plate = normalize_plate($plate);
     $plateNorm = $plate;
