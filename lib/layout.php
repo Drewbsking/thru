@@ -54,6 +54,9 @@ function render_head(string $title): void
 function render_foot(): void
 {
     echo '</main>';
+    echo '<footer class="site-footer">';
+    echo '<div class="site-footer-inner">N-CAT: Neighborhood Cut-through Analysis Tool - Created by Andrew Bates</div>';
+    echo '</footer>';
     echo '<script>';
     echo '(function(){';
     echo 'var topbar=document.getElementById("appTopbar");';

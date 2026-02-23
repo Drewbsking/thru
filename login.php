@@ -95,5 +95,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
       <?php endif; ?>
     </section>
   </main>
+  <footer class="site-footer">
+    <div class="site-footer-inner">N-CAT: Neighborhood Cut-through Analysis Tool - Created by Andrew Bates</div>
+  </footer>
 </body>
 </html>

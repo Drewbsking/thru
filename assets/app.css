@@ -56,6 +56,21 @@ body {
 
 .page { max-width: 1200px; margin: 1rem auto 2rem; padding: 0 1rem; }
 
+.site-footer {
+  margin-top: 1rem;
+  padding: 0.8rem 1rem;
+  border-top: 1px solid #d8dde7;
+  background: #f8fafc;
+}
+
+.site-footer-inner {
+  max-width: 1200px;
+  margin: 0 auto;
+  color: #475569;
+  font-size: 0.82rem;
+  text-align: center;
+}
+
 .grid { display: grid; gap: 1rem; }
 .grid.two { grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); }
 .grid.three { grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); }
