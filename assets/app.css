@@ -237,6 +237,84 @@ code.inline {
   margin: 0;
 }
 
+.direction-chip-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.45rem;
+  max-width: 420px;
+}
+
+.direction-chip > span {
+  min-height: 88px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.18rem;
+  border-width: 2px;
+  border-color: #cbd5e1;
+  background: #ffffff;
+}
+
+.direction-chip .direction-icon {
+  display: block;
+  font-size: 1.5rem;
+  line-height: 1;
+}
+
+.direction-chip .direction-name {
+  display: block;
+  font-size: 0.95rem;
+  font-weight: 800;
+  line-height: 1.2;
+}
+
+.direction-chip input:checked + span {
+  border-color: #000000;
+  box-shadow: 0 0 0 3px rgba(0, 0, 0, 0.25);
+  background: #ecfdf5;
+  color: #0f172a;
+}
+
+.vehicle-type-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(132px, 1fr));
+  gap: 0.45rem;
+}
+
+.vehicle-type-chip > span {
+  min-height: 104px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.25rem;
+  border-width: 2px;
+  border-color: #cbd5e1;
+  background: #ffffff;
+}
+
+.vehicle-type-chip .vehicle-icon {
+  display: block;
+  font-size: 1.7rem;
+  line-height: 1;
+}
+
+.vehicle-type-chip .vehicle-name {
+  display: block;
+  font-size: 0.9rem;
+  font-weight: 800;
+  line-height: 1.2;
+  text-align: center;
+}
+
+.vehicle-type-chip input:checked + span {
+  border-color: #000000;
+  box-shadow: 0 0 0 3px rgba(0, 0, 0, 0.25);
+  background: #ecfdf5;
+  color: #0f172a;
+}
+
 .color-chip-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(128px, 1fr));
@@ -326,6 +404,10 @@ code.inline {
 
   .inline-radio-group {
     gap: 0.25rem 0.7rem;
+  }
+
+  .vehicle-type-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .color-chip-grid {

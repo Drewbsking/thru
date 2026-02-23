@@ -101,20 +101,41 @@ render_head('Data Entry');
 
       <div class="choice-block">
         <div class="choice-title">Vehicle In/Out</div>
-        <div class="inline-radio-group">
-          <label class="inline-radio"><input type="radio" name="direction" value="In" checked> <span>In</span></label>
-          <label class="inline-radio"><input type="radio" name="direction" value="Out"> <span>Out</span></label>
+        <div class="direction-chip-grid">
+          <label class="radio-chip direction-chip">
+            <input type="radio" name="direction" value="In" checked>
+            <span><span class="direction-icon">⬇️</span><span class="direction-name">In</span></span>
+          </label>
+          <label class="radio-chip direction-chip">
+            <input type="radio" name="direction" value="Out">
+            <span><span class="direction-icon">⬆️</span><span class="direction-name">Out</span></span>
+          </label>
         </div>
       </div>
 
       <div class="choice-block">
         <div class="choice-title">Vehicle Type</div>
-        <div class="inline-radio-group">
-          <label class="inline-radio"><input type="radio" name="vehicle_type" value="Sedan" checked> <span>🚗 Sedan</span></label>
-          <label class="inline-radio"><input type="radio" name="vehicle_type" value="SUV"> <span>🚙 SUV</span></label>
-          <label class="inline-radio"><input type="radio" name="vehicle_type" value="Truck"> <span>🛻 Truck</span></label>
-          <label class="inline-radio"><input type="radio" name="vehicle_type" value="Minivan"> <span>🚐 Minivan</span></label>
-          <label class="inline-radio"><input type="radio" name="vehicle_type" value="Trailer/Motorcycle"> <span>🏍️ Trailer/Motorcycle</span></label>
+        <div class="vehicle-type-grid">
+          <label class="radio-chip vehicle-type-chip">
+            <input type="radio" name="vehicle_type" value="Sedan" checked>
+            <span><span class="vehicle-icon">🚗</span><span class="vehicle-name">Sedan</span></span>
+          </label>
+          <label class="radio-chip vehicle-type-chip">
+            <input type="radio" name="vehicle_type" value="SUV">
+            <span><span class="vehicle-icon">🚙</span><span class="vehicle-name">SUV</span></span>
+          </label>
+          <label class="radio-chip vehicle-type-chip">
+            <input type="radio" name="vehicle_type" value="Truck">
+            <span><span class="vehicle-icon">🛻</span><span class="vehicle-name">Truck</span></span>
+          </label>
+          <label class="radio-chip vehicle-type-chip">
+            <input type="radio" name="vehicle_type" value="Minivan">
+            <span><span class="vehicle-icon">🚐</span><span class="vehicle-name">Minivan</span></span>
+          </label>
+          <label class="radio-chip vehicle-type-chip">
+            <input type="radio" name="vehicle_type" value="Trailer/Motorcycle">
+            <span><span class="vehicle-icon">🏍️</span><span class="vehicle-name">Trailer/Motorcycle</span></span>
+          </label>
         </div>
       </div>
 
