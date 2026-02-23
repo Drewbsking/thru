@@ -195,6 +195,58 @@ code.inline {
   margin: 0;
 }
 
+.color-chip-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(128px, 1fr));
+  gap: 0.45rem;
+}
+
+.radio-chip.color-chip span {
+  min-height: 52px;
+  border-width: 2px;
+  border-color: #94a3b8;
+  font-weight: 700;
+  text-shadow: 0 1px 1px rgba(15, 23, 42, 0.2);
+}
+
+.radio-chip.color-chip input:checked + span {
+  box-shadow: 0 0 0 3px rgba(15, 23, 42, 0.2);
+  border-color: #0f172a;
+}
+
+.radio-chip.color-chip.color-white span {
+  background: linear-gradient(160deg, #ffffff 0%, #f3f4f6 100%);
+  color: #0f172a;
+  text-shadow: none;
+}
+
+.radio-chip.color-chip.color-black-blue span {
+  background: linear-gradient(135deg, #111827 0%, #1e40af 100%);
+  color: #ffffff;
+}
+
+.radio-chip.color-chip.color-gray-silver span {
+  background: linear-gradient(160deg, #e5e7eb 0%, #9ca3af 100%);
+  color: #111827;
+  text-shadow: none;
+}
+
+.radio-chip.color-chip.color-red span {
+  background: linear-gradient(160deg, #b91c1c 0%, #ef4444 100%);
+  color: #ffffff;
+}
+
+.radio-chip.color-chip.color-green span {
+  background: linear-gradient(160deg, #166534 0%, #22c55e 100%);
+  color: #ffffff;
+}
+
+.radio-chip.color-chip.color-other span {
+  background: repeating-linear-gradient(135deg, #e2e8f0, #e2e8f0 8px, #cbd5e1 8px, #cbd5e1 16px);
+  color: #111827;
+  text-shadow: none;
+}
+
 .entry-compact textarea {
   min-height: 72px;
 }
@@ -232,5 +284,9 @@ code.inline {
 
   .inline-radio-group {
     gap: 0.25rem 0.7rem;
+  }
+
+  .color-chip-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }

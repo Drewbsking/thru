@@ -39,6 +39,17 @@ if ($checkpointId > 0) {
 } elseif (count($checkpoints) > 0) {
     $checkpointId = (int)$checkpoints[0]['id'];
 }
+$selectedCheckpoint = null;
+foreach ($checkpoints as $cp) {
+    if ((int)$cp['id'] === $checkpointId) {
+        $selectedCheckpoint = $cp;
+        break;
+    }
+}
+$selectedCheckpointLabel = $selectedCheckpoint
+    ? ((string)$selectedCheckpoint['display_name'] . ' (' . (string)$selectedCheckpoint['checkpoint_code'] . ')')
+    : '';
+$showSelectors = $isAdmin && !$isCheckpointLocked && (count($scopedSites) > 1 || count($checkpoints) > 1);
 $initialCollectorName = current_username();
 
 render_head('Data Entry');
@@ -46,7 +57,8 @@ render_head('Data Entry');
 <section class="card entry-compact">
   <h1>Data Entry</h1>
   <?php if ($site): ?>
-    <p id="entryGreeting" class="status ok">You are recording at <?= h((string)$site['name']) ?>.</p>
+    <p id="entryGreeting" class="status ok">Welcome, <?= h($initialCollectorName !== '' ? $initialCollectorName : 'Collector') ?>. You are logged in.</p>
+    <p class="small" id="entryContextLabel">Site: <?= h((string)$site['name']) ?> | Checkpoint: <?= h($selectedCheckpointLabel !== '' ? $selectedCheckpointLabel : '--') ?></p>
   <?php endif; ?>
   <p class="small">All times use Eastern Time (ET).</p>
   <p class="small" id="studyPeriodLabel">Current Study Period: --</p>
@@ -56,36 +68,34 @@ render_head('Data Entry');
   <?php if (!$site): ?>
     <p class="status warn"><?= $isAdmin ? 'No active site found. Configure a site first in Site Setup.' : 'No checkpoint assignment found for your account. Ask an admin to assign your checkpoint.' ?></p>
   <?php else: ?>
-    <div class="form-row">
-      <div>
-        <label>Site</label>
-        <select id="site_id" <?= $isCheckpointLocked ? 'disabled' : '' ?>>
-          <?php foreach ($scopedSites as $s): ?>
-            <option value="<?= (int)$s['id'] ?>" <?= (int)$s['id'] === $siteId ? 'selected' : '' ?>><?= h($s['name']) ?></option>
-          <?php endforeach; ?>
-        </select>
+    <?php if ($showSelectors): ?>
+      <div class="form-row">
+        <div>
+          <label>Site</label>
+          <select id="site_id">
+            <?php foreach ($scopedSites as $s): ?>
+              <option value="<?= (int)$s['id'] ?>" <?= (int)$s['id'] === $siteId ? 'selected' : '' ?>><?= h($s['name']) ?></option>
+            <?php endforeach; ?>
+          </select>
+        </div>
+        <div>
+          <label>Checkpoint</label>
+          <select id="checkpoint_id">
+            <?php foreach ($checkpoints as $cp): ?>
+              <option value="<?= (int)$cp['id'] ?>" <?= (int)$cp['id'] === $checkpointId ? 'selected' : '' ?>>
+                <?= h($cp['display_name']) ?> (<?= h($cp['checkpoint_code']) ?>)
+              </option>
+            <?php endforeach; ?>
+          </select>
+        </div>
       </div>
-      <div>
-        <label>Checkpoint</label>
-        <select id="checkpoint_id" <?= $isCheckpointLocked ? 'disabled' : '' ?>>
-          <?php foreach ($checkpoints as $cp): ?>
-            <option value="<?= (int)$cp['id'] ?>" <?= (int)$cp['id'] === $checkpointId ? 'selected' : '' ?>>
-              <?= h($cp['display_name']) ?> (<?= h($cp['checkpoint_code']) ?>)
-            </option>
-          <?php endforeach; ?>
-        </select>
-      </div>
-    </div>
+    <?php endif; ?>
 
     <form id="eventForm" class="card" style="padding:0; border:0; box-shadow:none;">
       <div class="form-row">
         <div>
           <label>License Plate Number (First 3 characters)</label>
           <input id="plate" maxlength="32" placeholder="ABC" style="text-transform:uppercase;" autocapitalize="characters" spellcheck="false">
-        </div>
-        <div>
-          <label>Data Collector</label>
-          <input id="collector_name_display" value="<?= h($initialCollectorName !== '' ? $initialCollectorName : current_username()) ?>" readonly>
         </div>
       </div>
 
@@ -110,13 +120,31 @@ render_head('Data Entry');
 
       <div class="choice-block">
         <div class="choice-title">Vehicle Color</div>
-        <div class="inline-radio-group">
-          <label class="inline-radio"><input type="radio" name="vehicle_color" value="White" checked> <span>White</span></label>
-          <label class="inline-radio"><input type="radio" name="vehicle_color" value="Black/Blue"> <span>Black/Blue</span></label>
-          <label class="inline-radio"><input type="radio" name="vehicle_color" value="Gray/Silver"> <span>Gray/Silver</span></label>
-          <label class="inline-radio"><input type="radio" name="vehicle_color" value="Red"> <span>Red</span></label>
-          <label class="inline-radio"><input type="radio" name="vehicle_color" value="Green"> <span>Green</span></label>
-          <label class="inline-radio"><input type="radio" name="vehicle_color" value="Other"> <span>Other</span></label>
+        <div class="color-chip-grid">
+          <label class="radio-chip color-chip color-white">
+            <input type="radio" name="vehicle_color" value="White" checked>
+            <span>White</span>
+          </label>
+          <label class="radio-chip color-chip color-black-blue">
+            <input type="radio" name="vehicle_color" value="Black/Blue">
+            <span>Black/Blue</span>
+          </label>
+          <label class="radio-chip color-chip color-gray-silver">
+            <input type="radio" name="vehicle_color" value="Gray/Silver">
+            <span>Gray/Silver</span>
+          </label>
+          <label class="radio-chip color-chip color-red">
+            <input type="radio" name="vehicle_color" value="Red">
+            <span>Red</span>
+          </label>
+          <label class="radio-chip color-chip color-green">
+            <input type="radio" name="vehicle_color" value="Green">
+            <span>Green</span>
+          </label>
+          <label class="radio-chip color-chip color-other">
+            <input type="radio" name="vehicle_color" value="Other">
+            <span>Other</span>
+          </label>
         </div>
       </div>
 
@@ -130,7 +158,6 @@ render_head('Data Entry');
         <button type="submit">Save Event</button>
         <a class="btn secondary" href="dashboard.php">View Dashboard</a>
       </div>
-      <p class="small">Hotkeys (laptop): <code class="inline">I/O</code> direction, <code class="inline">1-5</code> type, <code class="inline">6-0/-</code> color.</p>
       <p id="saveStatus" class="status small" style="margin-top:0.7rem;"></p>
     </form>
 
@@ -150,20 +177,24 @@ render_head('Data Entry');
 </section>
 
 <script>
-const lockedCheckpoint = <?= $isCheckpointLocked ? 'true' : 'false' ?>;
 const currentUsername = <?= json_encode(current_username(), JSON_UNESCAPED_SLASHES) ?>;
 const initialSiteId = <?= (int)$siteId ?>;
 const initialCheckpointId = <?= (int)$checkpointId ?>;
-let collectorName = <?= json_encode($initialCollectorName, JSON_UNESCAPED_SLASHES) ?>;
-let currentCheckpoints = <?= json_encode($checkpoints, JSON_UNESCAPED_SLASHES) ?>;
+const initialSiteName = <?= json_encode((string)($site['name'] ?? ''), JSON_UNESCAPED_SLASHES) ?>;
+const initialCheckpointLabel = <?= json_encode($selectedCheckpointLabel, JSON_UNESCAPED_SLASHES) ?>;
+const collectorName = currentUsername;
+let activeSiteId = Number(initialSiteId || 0);
+let activeCheckpointId = Number(initialCheckpointId || 0);
+let activeSiteName = initialSiteName;
+let activeCheckpointLabel = initialCheckpointLabel;
 let pendingConfirmSignature = '';
 
 const siteInput = document.getElementById('site_id');
 const cpInput = document.getElementById('checkpoint_id');
 const form = document.getElementById('eventForm');
 const statusEl = document.getElementById('saveStatus');
-const collectorDisplay = document.getElementById('collector_name_display');
 const greetingEl = document.getElementById('entryGreeting');
+const contextLabelEl = document.getElementById('entryContextLabel');
 const plateInput = document.getElementById('plate');
 const notesInput = document.getElementById('notes');
 const studyPeriodLabel = document.getElementById('studyPeriodLabel');
@@ -187,21 +218,25 @@ function forceUppercaseInput(el) {
 }
 
 function getSiteId() {
-  if (lockedCheckpoint) return Number(initialSiteId || 0);
-  if (!siteInput) return 0;
-  if (!siteInput.value && siteInput.options.length > 0) {
-    siteInput.value = siteInput.options[0].value;
+  if (siteInput) {
+    if (!siteInput.value && siteInput.options.length > 0) {
+      siteInput.value = siteInput.options[0].value;
+    }
+    activeSiteId = Number(siteInput.value || 0);
+    activeSiteName = siteInput.options[siteInput.selectedIndex]?.text || activeSiteName;
   }
-  return Number(siteInput.value || 0);
+  return Number(activeSiteId || 0);
 }
 
 function getCheckpointId() {
-  if (lockedCheckpoint) return Number(initialCheckpointId || 0);
-  if (!cpInput) return 0;
-  if (!cpInput.value && cpInput.options.length > 0) {
-    cpInput.value = cpInput.options[0].value;
+  if (cpInput) {
+    if (!cpInput.value && cpInput.options.length > 0) {
+      cpInput.value = cpInput.options[0].value;
+    }
+    activeCheckpointId = Number(cpInput.value || 0);
+    activeCheckpointLabel = cpInput.options[cpInput.selectedIndex]?.text || activeCheckpointLabel;
   }
-  return Number(cpInput.value || 0);
+  return Number(activeCheckpointId || 0);
 }
 
 function getCurrentStudyPeriod() {
@@ -299,20 +334,16 @@ if (notesInput) notesInput.addEventListener('input', clearPendingConfirm);
 forceUppercaseInput(plateInput);
 forceUppercaseInput(notesInput);
 
-function syncCollectorForSelectedCheckpoint() {
-  collectorName = currentUsername;
-  if (collectorDisplay) {
-    collectorDisplay.value = currentUsername;
-  }
+function syncGreeting() {
+  if (!greetingEl) return;
+  greetingEl.textContent = `Welcome, ${currentUsername}. You are logged in.`;
 }
 
-function syncGreeting(selectedSiteName = null) {
-  if (!greetingEl) return;
-  const siteName = selectedSiteName || (siteInput ? siteInput.options[siteInput.selectedIndex]?.text : '');
-  const checkpointName = cpInput ? cpInput.options[cpInput.selectedIndex]?.text : '';
-  greetingEl.textContent = checkpointName
-    ? `You are recording at ${siteName} (${checkpointName}).`
-    : `You are recording at ${siteName}.`;
+function syncContextLabel() {
+  if (!contextLabelEl) return;
+  const siteName = activeSiteName || '--';
+  const checkpointName = activeCheckpointLabel || '--';
+  contextLabelEl.textContent = `Site: ${siteName} | Checkpoint: ${checkpointName}`;
 }
 
 async function loadCheckpointSummary() {
@@ -423,7 +454,7 @@ async function refreshEntryContext() {
   }
 }
 
-if (siteInput && cpInput && !lockedCheckpoint) {
+if (siteInput && cpInput) {
   siteInput.addEventListener('change', async () => {
     const res = await fetch('api/site_context.php');
     const data = await res.json();
@@ -432,28 +463,34 @@ if (siteInput && cpInput && !lockedCheckpoint) {
     const site = data.sites.find(s => Number(s.id) === selectedSite);
     cpInput.innerHTML = '';
     if (!site) return;
-    currentCheckpoints = site.checkpoints || [];
+    activeSiteId = selectedSite;
+    activeSiteName = site.name || '';
     for (const cp of site.checkpoints) {
       const opt = document.createElement('option');
       opt.value = cp.id;
       opt.textContent = `${cp.display_name} (${cp.checkpoint_code})`;
       cpInput.appendChild(opt);
     }
-    syncCollectorForSelectedCheckpoint();
-    syncGreeting(site.name || '');
+    if (cpInput.options.length > 0) {
+      cpInput.value = cpInput.options[0].value;
+    }
+    activeCheckpointId = Number(cpInput.value || 0);
+    activeCheckpointLabel = cpInput.options[cpInput.selectedIndex]?.text || '--';
+    syncContextLabel();
     await refreshEntryContext();
   });
 }
 
 if (cpInput) {
   cpInput.addEventListener('change', async () => {
-    syncCollectorForSelectedCheckpoint();
-    syncGreeting();
+    activeCheckpointId = Number(cpInput.value || 0);
+    activeCheckpointLabel = cpInput.options[cpInput.selectedIndex]?.text || '--';
+    syncContextLabel();
     await refreshEntryContext();
   });
 }
-syncCollectorForSelectedCheckpoint();
 syncGreeting();
+syncContextLabel();
 refreshEntryContext();
 
 if (recentEntriesToggle && recentEntriesPanel) {
@@ -550,32 +587,6 @@ if (recentEntryBody) {
   });
 }
 
-document.addEventListener('keydown', (e) => {
-  const tag = (e.target && e.target.tagName) ? e.target.tagName.toLowerCase() : '';
-  if (tag === 'input' || tag === 'textarea' || tag === 'select') return;
-
-  const key = e.key.toLowerCase();
-  if (key === 'i') {
-    document.querySelector('input[name=\"direction\"][value=\"In\"]')?.click();
-    return;
-  }
-  if (key === 'o') {
-    document.querySelector('input[name=\"direction\"][value=\"Out\"]')?.click();
-    return;
-  }
-
-  const typeMap = { '1': 'Sedan', '2': 'SUV', '3': 'Truck', '4': 'Minivan', '5': 'Trailer/Motorcycle' };
-  if (typeMap[key]) {
-    document.querySelector(`input[name=\"vehicle_type\"][value=\"${typeMap[key]}\"]`)?.click();
-    return;
-  }
-
-  const colorMap = { '6': 'White', '7': 'Black/Blue', '8': 'Gray/Silver', '9': 'Red', '0': 'Green', '-': 'Other' };
-  if (colorMap[key]) {
-    document.querySelector(`input[name=\"vehicle_color\"][value=\"${colorMap[key]}\"]`)?.click();
-  }
-});
-
 if (form) {
   form.addEventListener('submit', async (e) => {
     e.preventDefault();
@@ -589,8 +600,16 @@ if (form) {
       return;
     }
 
-    payload.append('site_id', lockedCheckpoint ? String(initialSiteId) : siteInput.value);
-    payload.append('checkpoint_id', lockedCheckpoint ? String(initialCheckpointId) : cpInput.value);
+    const siteId = getSiteId();
+    const checkpointId = getCheckpointId();
+    if (!siteId || !checkpointId) {
+      statusEl.textContent = 'Invalid site/checkpoint selection.';
+      statusEl.className = 'status warn';
+      return;
+    }
+
+    payload.append('site_id', String(siteId));
+    payload.append('checkpoint_id', String(checkpointId));
     payload.append('direction', selectedRadioValue('direction') || 'In');
     payload.append('plate', (document.getElementById('plate').value || '').toUpperCase());
     payload.append('vehicle_type', vehicleType);
