@@ -11,10 +11,23 @@ function auth_session_start(): void
     }
 }
 
+function current_script_basename(): string
+{
+    $script = (string)($_SERVER['SCRIPT_NAME'] ?? $_SERVER['PHP_SELF'] ?? '');
+    return basename($script);
+}
+
 function current_user(): ?array
 {
     auth_session_start();
     $id = (int)($_SESSION['user_id'] ?? 0);
+    if ($id <= 0 && (int)($_SESSION['viewer_dashboard_only'] ?? 0) === 1) {
+        return [
+            'id' => 0,
+            'username' => 'viewer',
+            'role' => 'viewer',
+        ];
+    }
     if ($id <= 0) {
         return null;
     }
@@ -45,10 +58,36 @@ function is_admin(): bool
     return current_user_role() === 'admin';
 }
 
+function is_dashboard_viewer(): bool
+{
+    auth_session_start();
+    return (int)($_SESSION['viewer_dashboard_only'] ?? 0) === 1;
+}
+
 function is_authenticated(): bool
 {
     auth_session_start();
     return (int)($_SESSION['user_id'] ?? 0) > 0;
+}
+
+function login_dashboard_viewer_with_code(string $accessCode): bool
+{
+    $accessCode = trim($accessCode);
+    if ($accessCode === '') {
+        return false;
+    }
+
+    $storedHash = (string)app_setting('dashboard_view_pass_hash', '');
+    if ($storedHash === '' || !password_verify($accessCode, $storedHash)) {
+        return false;
+    }
+
+    auth_session_start();
+    $_SESSION = [];
+    $_SESSION['viewer_dashboard_only'] = 1;
+    $_SESSION['auth_at'] = time();
+    session_regenerate_id(true);
+    return true;
 }
 
 function csrf_token(): string
@@ -96,6 +135,7 @@ function login_with_credentials(string $username, string $password): bool
     }
 
     auth_session_start();
+    unset($_SESSION['viewer_dashboard_only']);
     $_SESSION['user_id'] = (int)$row['id'];
     $_SESSION['username'] = (string)$row['username'];
     $_SESSION['role'] = (string)$row['role'];
@@ -120,6 +160,14 @@ function require_auth_page(): void
     if (is_authenticated()) {
         return;
     }
+    if (is_dashboard_viewer()) {
+        $script = current_script_basename();
+        if ($script === 'dashboard.php' || $script === 'logout.php') {
+            return;
+        }
+        header('Location: dashboard.php', true, 302);
+        exit;
+    }
 
     $next = urlencode($_SERVER['REQUEST_URI'] ?? '/');
     header('Location: login.php?next=' . $next, true, 302);
@@ -141,6 +189,13 @@ function require_auth_api(): void
 {
     if (is_authenticated()) {
         return;
+    }
+    if (is_dashboard_viewer()) {
+        $script = current_script_basename();
+        if ($script === 'dashboard_data.php') {
+            return;
+        }
+        json_response(['ok' => false, 'error' => 'Dashboard viewer is read-only.'], 403);
     }
 
     json_response(['ok' => false, 'error' => 'Unauthorized'], 401);

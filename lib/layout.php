@@ -20,12 +20,16 @@ function render_head(string $title): void
     echo '<header class="topbar">';
     echo '<div class="brand">N-CAT: Neighborhood Cut-through Analysis Tool</div>';
     echo '<nav class="nav">';
-    echo '<a href="index.php">Home</a>';
-    echo '<a href="dashboard.php">Dashboard</a>';
-    echo '<a href="details.php">Cut-Through Details</a>';
-    echo '<a href="about.php">About</a>';
-    if (is_admin()) {
-        echo '<a href="setup.php">Site Setup</a>';
+    if (is_dashboard_viewer()) {
+        echo '<a href="dashboard.php">Dashboard</a>';
+    } else {
+        echo '<a href="index.php">Home</a>';
+        echo '<a href="dashboard.php">Dashboard</a>';
+        echo '<a href="details.php">Cut-Through Details</a>';
+        echo '<a href="about.php">About</a>';
+        if (is_admin()) {
+            echo '<a href="setup.php">Site Setup</a>';
+        }
     }
     echo '<a href="logout.php">Logout</a>';
     echo '</nav></header>';

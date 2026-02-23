@@ -81,6 +81,18 @@ $setupCsrfToken = csrf_token();
       <button type="submit" class="secondary">Update Admin Password</button>
       <p id="passwordStatus" class="status small"></p>
     </form>
+
+    <hr style="margin:1rem 0; border:0; border-top:1px solid #d8dde7;">
+    <h3>Dashboard Viewer Access Code</h3>
+    <p class="small" id="viewerCodeEnabled">Viewer access is currently disabled.</p>
+    <form id="viewerCodeForm">
+      <div class="form-row">
+        <div><label>New Access Code</label><input id="viewer_access_code" type="password" minlength="8" required></div>
+        <div><label>Confirm Access Code</label><input id="viewer_access_code_confirm" type="password" minlength="8" required></div>
+      </div>
+      <button type="submit" class="secondary">Update Viewer Code</button>
+      <p id="viewerCodeStatus" class="status small"></p>
+    </form>
   </article>
 
   <article class="card">
@@ -210,6 +222,12 @@ function renderSettings() {
   const s = context.settings;
   for (const k of ['speed_mph','buffer_minutes','min_confidence','poll_seconds','policy_cut_through_percent']) {
     document.getElementById(k).value = s[k];
+  }
+  const viewerStatus = document.getElementById('viewerCodeEnabled');
+  if (viewerStatus) {
+    viewerStatus.textContent = s.dashboard_view_enabled
+      ? 'Viewer access is enabled. Share the access code (no username needed).'
+      : 'Viewer access is currently disabled.';
   }
 }
 
@@ -447,6 +465,29 @@ document.getElementById('passwordForm').addEventListener('submit', async (e) => 
     document.getElementById('new_password').value = '';
     document.getElementById('confirm_new_password').value = '';
   }
+});
+
+document.getElementById('viewerCodeForm').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const accessCode = document.getElementById('viewer_access_code').value;
+  const confirmCode = document.getElementById('viewer_access_code_confirm').value;
+  if (accessCode !== confirmCode) {
+    document.getElementById('viewerCodeStatus').textContent = 'Access code values do not match.';
+    document.getElementById('viewerCodeStatus').className = 'status warn';
+    return;
+  }
+
+  const out = await post('save_viewer_access_code', {
+    viewer_access_code: accessCode,
+    viewer_access_code_confirm: confirmCode,
+  });
+  document.getElementById('viewerCodeStatus').textContent = out.ok ? 'Viewer access code updated.' : out.error;
+  document.getElementById('viewerCodeStatus').className = out.ok ? 'status ok' : 'status warn';
+  if (out.ok) {
+    document.getElementById('viewer_access_code').value = '';
+    document.getElementById('viewer_access_code_confirm').value = '';
+  }
+  await loadContext();
 });
 
 document.getElementById('collectorForm').addEventListener('submit', async (e) => {

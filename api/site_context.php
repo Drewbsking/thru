@@ -42,5 +42,6 @@ json_response([
         'min_confidence' => (int)app_setting('min_confidence', '70'),
         'poll_seconds' => (int)app_setting('poll_seconds', '10'),
         'policy_cut_through_percent' => (float)app_setting('policy_cut_through_percent', '25'),
+        'dashboard_view_enabled' => app_setting('dashboard_view_pass_hash', '') !== '',
     ],
 ]);

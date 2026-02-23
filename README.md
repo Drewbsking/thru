@@ -62,6 +62,7 @@
 - Collector users can only submit/view/edit/delete events for assigned checkpoints.
 - Collectors can only edit/delete their own events; admins can edit/delete any event.
 - Admin setup API actions are CSRF-protected.
+- Optional dashboard viewer mode is available with a shared access code (no username); this mode is read-only and restricted to `dashboard.php` for the active site.
 
 ## Notes
 - Works on shared PHP/MySQL hosting.

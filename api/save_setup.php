@@ -23,6 +23,9 @@ function action_router(string $action): void
         case 'save_auth_password':
             save_auth_password();
             return;
+        case 'save_viewer_access_code':
+            save_viewer_access_code();
+            return;
         case 'create_collector':
             create_collector();
             return;
@@ -89,6 +92,22 @@ function save_auth_password(): void
     $stmt->bind_param('si', $hash, $userId);
     $stmt->execute();
     $stmt->close();
+    json_response(['ok' => true]);
+}
+
+function save_viewer_access_code(): void
+{
+    $accessCode = (string)($_POST['viewer_access_code'] ?? '');
+    $confirmCode = (string)($_POST['viewer_access_code_confirm'] ?? '');
+    if (strlen($accessCode) < 8) {
+        json_response(['ok' => false, 'error' => 'Viewer access code must be at least 8 characters.'], 422);
+    }
+    if ($accessCode !== $confirmCode) {
+        json_response(['ok' => false, 'error' => 'Access code values do not match.'], 422);
+    }
+
+    $hash = password_hash($accessCode, PASSWORD_DEFAULT);
+    set_app_setting('dashboard_view_pass_hash', $hash);
     json_response(['ok' => true]);
 }
 
