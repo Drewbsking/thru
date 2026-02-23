@@ -31,6 +31,7 @@ render_head('Cut-Through Details');
     <div>
       <label>&nbsp;</label>
       <button type="button" id="exportBtn" class="secondary">Export Matches CSV</button>
+      <button type="button" id="exportAllBtn" class="secondary">Export All Events CSV</button>
     </div>
   </div>
 </section>
@@ -133,6 +134,13 @@ function exportCsv() {
   URL.revokeObjectURL(a.href);
 }
 
+function exportAllEventsCsv() {
+  const siteId = document.getElementById('site_id').value;
+  const studyPeriod = document.getElementById('study_period').value;
+  const url = `api/export_events_csv.php?site_id=${encodeURIComponent(siteId)}&study_period=${encodeURIComponent(studyPeriod)}`;
+  window.location.href = url;
+}
+
 async function loadDetails() {
   const siteId = document.getElementById('site_id').value;
   const studyPeriod = document.getElementById('study_period').value;
@@ -187,6 +195,7 @@ async function loadDetails() {
 document.getElementById('site_id').addEventListener('change', loadDetails);
 document.getElementById('study_period').addEventListener('change', loadDetails);
 document.getElementById('exportBtn').addEventListener('click', exportCsv);
+document.getElementById('exportAllBtn').addEventListener('click', exportAllEventsCsv);
 document.getElementById('study_period').value = currentStudyPeriod();
 loadDetails();
 </script>

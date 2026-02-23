@@ -29,6 +29,7 @@
 - `api/site_context.php`
 - `api/save_setup.php`
 - `api/list_distances.php`
+- `api/export_events_csv.php` (exports all events for selected site + study period/date)
 
 ## Database
 - Auto-bootstrap runs when pages/APIs load.
