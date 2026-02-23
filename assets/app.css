@@ -255,7 +255,8 @@ code.inline {
 }
 
 .entry-meta-toggle {
-  margin-bottom: 0.4rem;
+  margin-top: 0.65rem;
+  margin-bottom: 0.35rem;
 }
 
 .entry-meta-toggle .secondary {
@@ -264,7 +265,7 @@ code.inline {
 }
 
 .entry-meta-panel {
-  margin-bottom: 0.5rem;
+  margin-bottom: 0;
 }
 
 .notes-toggle-row {

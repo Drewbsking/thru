@@ -55,21 +55,6 @@ $initialCollectorName = current_username();
 render_head('Data Entry');
 ?>
 <section class="card entry-compact">
-  <?php if ($site): ?>
-    <div class="entry-meta-toggle">
-      <button type="button" id="entryMetaToggle" class="secondary" aria-expanded="true" aria-controls="entryMetaPanel">Hide Study Info</button>
-    </div>
-  <?php endif; ?>
-  <div id="entryMetaPanel" class="entry-meta-panel">
-    <?php if ($site): ?>
-      <p id="entryGreeting" class="status ok">Welcome, <?= h($initialCollectorName !== '' ? $initialCollectorName : 'Collector') ?>. You are logged in.</p>
-      <p class="small" id="entryContextLabel">Site: <?= h((string)$site['name']) ?> | Checkpoint: <?= h($selectedCheckpointLabel !== '' ? $selectedCheckpointLabel : '--') ?></p>
-    <?php endif; ?>
-    <p class="small">All times use Eastern Time (ET).</p>
-    <p class="small" id="studyPeriodLabel">Current Study Period: --</p>
-    <p class="small" id="checkpointSummaryLabel">Checkpoint Summary: --</p>
-  </div>
-
   <?php if (!$site): ?>
     <p class="status warn"><?= $isAdmin ? 'No active site found. Configure a site first in Site Setup.' : 'No checkpoint assignment found for your account. Ask an admin to assign your checkpoint.' ?></p>
   <?php else: ?>
@@ -197,6 +182,19 @@ render_head('Data Entry');
       </div>
       <p id="saveStatus" class="status small" style="margin-top:0.7rem;"></p>
     </form>
+  <?php endif; ?>
+
+  <?php if ($site): ?>
+    <div class="entry-meta-toggle">
+      <button type="button" id="entryMetaToggle" class="secondary" aria-expanded="true" aria-controls="entryMetaPanel">Hide Study Info</button>
+    </div>
+    <div id="entryMetaPanel" class="entry-meta-panel">
+      <p id="entryGreeting" class="status ok">Welcome, <?= h($initialCollectorName !== '' ? $initialCollectorName : 'Collector') ?>. You are logged in.</p>
+      <p class="small" id="entryContextLabel">Site: <?= h((string)$site['name']) ?> | Checkpoint: <?= h($selectedCheckpointLabel !== '' ? $selectedCheckpointLabel : '--') ?></p>
+      <p class="small">All times use Eastern Time (ET).</p>
+      <p class="small" id="studyPeriodLabel">Current Study Period: --</p>
+      <p class="small" id="checkpointSummaryLabel">Checkpoint Summary: --</p>
+    </div>
   <?php endif; ?>
 </section>
 
