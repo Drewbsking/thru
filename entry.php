@@ -39,19 +39,7 @@ if ($checkpointId > 0) {
 } elseif (count($checkpoints) > 0) {
     $checkpointId = (int)$checkpoints[0]['id'];
 }
-$initialCollectorName = !$isAdmin ? current_username() : '';
-if ($checkpointId > 0) {
-    foreach ($checkpoints as $cp) {
-        if ((int)$cp['id'] === $checkpointId) {
-            if ($isAdmin) {
-                $initialCollectorName = (string)($cp['collector_name'] ?? '');
-            }
-            break;
-        }
-    }
-} elseif ($isAdmin && count($checkpoints) > 0) {
-    $initialCollectorName = (string)($checkpoints[0]['collector_name'] ?? '');
-}
+$initialCollectorName = current_username();
 
 render_head('Data Entry');
 ?>
@@ -97,7 +85,7 @@ render_head('Data Entry');
         </div>
         <div>
           <label>Data Collector</label>
-          <input id="collector_name_display" value="<?= h($initialCollectorName !== '' ? $initialCollectorName : ($isAdmin ? 'Not set on this checkpoint in Site Setup' : current_username())) ?>" readonly>
+          <input id="collector_name_display" value="<?= h($initialCollectorName !== '' ? $initialCollectorName : current_username()) ?>" readonly>
         </div>
       </div>
 
@@ -163,7 +151,6 @@ render_head('Data Entry');
 
 <script>
 const lockedCheckpoint = <?= $isCheckpointLocked ? 'true' : 'false' ?>;
-const isAdminUser = <?= $isAdmin ? 'true' : 'false' ?>;
 const currentUsername = <?= json_encode(current_username(), JSON_UNESCAPED_SLASHES) ?>;
 const initialSiteId = <?= (int)$siteId ?>;
 const initialCheckpointId = <?= (int)$checkpointId ?>;
@@ -313,19 +300,9 @@ forceUppercaseInput(plateInput);
 forceUppercaseInput(notesInput);
 
 function syncCollectorForSelectedCheckpoint() {
-  if (!cpInput) return;
-  if (!isAdminUser) {
-    collectorName = currentUsername;
-    if (collectorDisplay) {
-      collectorDisplay.value = currentUsername;
-    }
-    return;
-  }
-  const selectedCheckpointId = Number(cpInput.value || 0);
-  const selectedCheckpoint = currentCheckpoints.find(cp => Number(cp.id) === selectedCheckpointId);
-  collectorName = selectedCheckpoint && selectedCheckpoint.collector_name ? selectedCheckpoint.collector_name : '';
+  collectorName = currentUsername;
   if (collectorDisplay) {
-    collectorDisplay.value = collectorName || 'Not set on this checkpoint in Site Setup';
+    collectorDisplay.value = currentUsername;
   }
 }
 

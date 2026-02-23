@@ -214,7 +214,6 @@ function save_checkpoint(): void
     $siteId = (int)($_POST['site_id'] ?? 0);
     $checkpointId = (int)($_POST['checkpoint_id'] ?? 0);
     $name = trim((string)($_POST['display_name'] ?? ''));
-    $collectorName = trim((string)($_POST['collector_name'] ?? ''));
     $type = (string)($_POST['checkpoint_type'] ?? 'Both');
     if (!in_array($type, ['Entrance', 'Exit', 'Both'], true)) {
         $type = 'Both';
@@ -225,8 +224,8 @@ function save_checkpoint(): void
     }
 
     if ($checkpointId > 0) {
-        $stmt = db_prepare('UPDATE checkpoints SET display_name = ?, collector_name = ?, checkpoint_type = ? WHERE id = ? AND site_id = ?');
-        $stmt->bind_param('sssii', $name, $collectorName, $type, $checkpointId, $siteId);
+        $stmt = db_prepare('UPDATE checkpoints SET display_name = ?, checkpoint_type = ? WHERE id = ? AND site_id = ?');
+        $stmt->bind_param('ssii', $name, $type, $checkpointId, $siteId);
         $stmt->execute();
         $stmt->close();
     } else {
@@ -252,8 +251,8 @@ function save_checkpoint(): void
         }
         $nextCode = (string)$next;
 
-        $stmt = db_prepare('INSERT INTO checkpoints (site_id, checkpoint_code, display_name, collector_name, checkpoint_type, is_active) VALUES (?, ?, ?, ?, ?, 1)');
-        $stmt->bind_param('issss', $siteId, $nextCode, $name, $collectorName, $type);
+        $stmt = db_prepare('INSERT INTO checkpoints (site_id, checkpoint_code, display_name, collector_name, checkpoint_type, is_active) VALUES (?, ?, ?, NULL, ?, 1)');
+        $stmt->bind_param('isss', $siteId, $nextCode, $name, $type);
         $stmt->execute();
         $checkpointId = $stmt->insert_id;
         $stmt->close();

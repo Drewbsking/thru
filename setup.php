@@ -123,32 +123,23 @@ $setupCsrfToken = csrf_token();
       <input type="hidden" id="checkpoint_id" value="0">
       <div class="form-row">
         <div><label>Display Name</label><input id="display_name" placeholder="Main Entrance"></div>
-        <div><label>Data Collector</label><input id="collector_name" maxlength="80" placeholder="Collector assigned to this checkpoint"></div>
         <div><label>Type</label><select id="checkpoint_type"><option>Both</option><option>Entrance</option><option>Exit</option></select></div>
       </div>
       <button type="submit">Save Checkpoint</button>
       <p id="cpStatus" class="status small"></p>
     </form>
     <table>
-      <thead><tr><th>#</th><th>Name</th><th>Collector</th><th>Type</th><th>Action</th></tr></thead>
+      <thead><tr><th>#</th><th>Name</th><th>Type</th><th>Action</th></tr></thead>
       <tbody id="cpBody"></tbody>
     </table>
   </article>
 
   <article class="card">
     <h2>Distances Between Checkpoints</h2>
-    <p class="small">These distances + speed define expected travel time for cut-through matching.</p>
-    <form id="distanceForm">
-      <div class="form-row">
-        <div><label>From</label><select id="from_cp"></select></div>
-        <div><label>To</label><select id="to_cp"></select></div>
-        <div><label>Distance (miles)</label><input id="distance_miles" type="number" min="0.01" step="0.01"></div>
-      </div>
-      <button type="submit">Save Distance</button>
-      <p id="distanceStatus" class="status small"></p>
-    </form>
+    <p class="small">Checkpoint combinations are auto-generated. Enter miles and save each pair.</p>
+    <p id="distanceStatus" class="status small"></p>
     <table>
-      <thead><tr><th>From</th><th>To</th><th>Miles</th><th>Expected @ Speed</th></tr></thead>
+      <thead><tr><th>From</th><th>To</th><th>Miles</th><th>Expected @ Speed</th><th>Action</th></tr></thead>
       <tbody id="distanceBody"></tbody>
     </table>
   </article>
@@ -209,20 +200,9 @@ function renderCheckpoints() {
   cpBody.innerHTML = '';
   cps.forEach(cp => {
     const tr = document.createElement('tr');
-    tr.innerHTML = `<td>${cp.checkpoint_code}</td><td>${cp.display_name}</td><td>${cp.collector_name || ''}</td><td>${cp.checkpoint_type}</td>
+    tr.innerHTML = `<td>${cp.checkpoint_code}</td><td>${cp.display_name}</td><td>${cp.checkpoint_type}</td>
       <td><button type="button" class="secondary" data-edit="${cp.id}">Edit</button> <button type="button" class="warn" data-del="${cp.id}">Delete</button></td>`;
     cpBody.appendChild(tr);
-  });
-
-  const from = document.getElementById('from_cp');
-  const to = document.getElementById('to_cp');
-  from.innerHTML = '';
-  to.innerHTML = '';
-  cps.forEach(cp => {
-    const o1 = document.createElement('option');
-    o1.value = cp.id; o1.textContent = cp.display_name;
-    const o2 = o1.cloneNode(true);
-    from.appendChild(o1); to.appendChild(o2);
   });
 }
 
@@ -250,19 +230,104 @@ function renderDistances() {
   tbody.innerHTML = '';
   const site = context.sites.find(s => Number(s.id) === selectedSiteId());
   if (!site) return;
-  const cpMap = new Map(site.checkpoints.map(cp => [Number(cp.id), cp.display_name]));
-  const speed = Number(context.settings.speed_mph || 25);
-
-  distances.filter(d => Number(d.site_id) === Number(site.id)).forEach(d => {
-    const expected = ((Number(d.distance_miles) / speed) * 60).toFixed(2);
-    const tr = document.createElement('tr');
-    tr.innerHTML = `<td>${cpMap.get(Number(d.from_checkpoint_id)) || d.from_checkpoint_id}</td>
-      <td>${cpMap.get(Number(d.to_checkpoint_id)) || d.to_checkpoint_id}</td>
-      <td>${d.distance_miles}</td>
-      <td>${expected} min</td>`;
-    tbody.appendChild(tr);
+  const cps = [...(site.checkpoints || [])].sort((a, b) => {
+    const aNum = Number(a.checkpoint_code);
+    const bNum = Number(b.checkpoint_code);
+    if (Number.isFinite(aNum) && Number.isFinite(bNum) && aNum !== bNum) return aNum - bNum;
+    return String(a.display_name || '').localeCompare(String(b.display_name || ''));
   });
+  if (cps.length < 2) {
+    tbody.innerHTML = '<tr><td colspan="5">Add at least 2 checkpoints to define distances.</td></tr>';
+    return;
+  }
+
+  const speed = Number(context.settings.speed_mph || 25);
+  const pairMiles = new Map();
+
+  function pairKey(a, b) {
+    const first = Math.min(Number(a), Number(b));
+    const second = Math.max(Number(a), Number(b));
+    return `${first}:${second}`;
+  }
+
+  distances
+    .filter(d => Number(d.site_id) === Number(site.id))
+    .forEach(d => {
+      const key = pairKey(d.from_checkpoint_id, d.to_checkpoint_id);
+      if (!pairMiles.has(key)) {
+        pairMiles.set(key, Number(d.distance_miles));
+      }
+    });
+
+  for (let i = 0; i < cps.length; i += 1) {
+    for (let j = i + 1; j < cps.length; j += 1) {
+      const fromCp = cps[i];
+      const toCp = cps[j];
+      const key = pairKey(fromCp.id, toCp.id);
+      const miles = pairMiles.get(key);
+      const milesText = Number.isFinite(miles) ? Number(miles).toFixed(3) : '';
+      const expected = Number.isFinite(miles) && miles > 0 ? ((miles / speed) * 60).toFixed(2) : '--';
+
+      const tr = document.createElement('tr');
+      tr.innerHTML = `<td>${fromCp.display_name} (${fromCp.checkpoint_code})</td>
+        <td>${toCp.display_name} (${toCp.checkpoint_code})</td>
+        <td><input type="number" min="0.01" step="0.01" data-distance-input value="${milesText}"></td>
+        <td data-expected>${expected === '--' ? '--' : `${expected} min`}</td>
+        <td><button type="button" data-save-distance data-from-id="${fromCp.id}" data-to-id="${toCp.id}">Save</button></td>`;
+      tbody.appendChild(tr);
+    }
+  }
 }
+
+function expectedMinutesText(distanceMiles) {
+  const speed = Number(context?.settings?.speed_mph || 25);
+  const miles = Number(distanceMiles);
+  if (!(miles > 0) || !(speed > 0)) return '--';
+  return `${((miles / speed) * 60).toFixed(2)} min`;
+}
+
+document.getElementById('distanceBody').addEventListener('input', (e) => {
+  const target = e.target;
+  if (!(target instanceof HTMLInputElement) || target.dataset.distanceInput === undefined) return;
+  const tr = target.closest('tr');
+  if (!tr) return;
+  const expectedCell = tr.querySelector('[data-expected]');
+  if (!(expectedCell instanceof HTMLElement)) return;
+  expectedCell.textContent = expectedMinutesText(target.value);
+});
+
+document.getElementById('distanceBody').addEventListener('click', async (e) => {
+  const target = e.target;
+  if (!(target instanceof HTMLElement) || target.dataset.saveDistance === undefined) return;
+  const tr = target.closest('tr');
+  if (!tr) return;
+  const input = tr.querySelector('input[data-distance-input]');
+  if (!(input instanceof HTMLInputElement)) return;
+  const miles = Number(input.value || 0);
+  if (!(miles > 0)) {
+    document.getElementById('distanceStatus').textContent = 'Distance must be greater than 0.';
+    document.getElementById('distanceStatus').className = 'status warn';
+    return;
+  }
+  const fromId = Number(target.dataset.fromId || 0);
+  const toId = Number(target.dataset.toId || 0);
+  if (!(fromId > 0) || !(toId > 0) || fromId === toId) {
+    document.getElementById('distanceStatus').textContent = 'Invalid checkpoint pair.';
+    document.getElementById('distanceStatus').className = 'status warn';
+    return;
+  }
+  const out = await post('save_distance', {
+    site_id: selectedSiteId(),
+    from_checkpoint_id: String(fromId),
+    to_checkpoint_id: String(toId),
+    distance_miles: miles.toFixed(3),
+  });
+  document.getElementById('distanceStatus').textContent = out.ok ? 'Distance saved.' : out.error;
+  document.getElementById('distanceStatus').className = out.ok ? 'status ok' : 'status warn';
+  if (out.ok) {
+    await loadContext();
+  }
+});
 
 function renderCollectorsAndAssignments() {
   const collectors = (context.users || []).filter(u => u.role === 'collector' && Number(u.is_active) === 1);
@@ -458,7 +523,6 @@ document.getElementById('checkpointForm').addEventListener('submit', async (e) =
     site_id: selectedSiteId(),
     checkpoint_id: document.getElementById('checkpoint_id').value,
     display_name: document.getElementById('display_name').value,
-    collector_name: document.getElementById('collector_name').value,
     checkpoint_type: document.getElementById('checkpoint_type').value,
   });
   document.getElementById('cpStatus').textContent = out.ok ? 'Checkpoint saved.' : out.error;
@@ -466,7 +530,6 @@ document.getElementById('checkpointForm').addEventListener('submit', async (e) =
   if (out.ok) {
     document.getElementById('checkpoint_id').value = '0';
     document.getElementById('display_name').value = '';
-    document.getElementById('collector_name').value = '';
     document.getElementById('checkpoint_type').value = 'Both';
   }
   await loadContext();
@@ -483,7 +546,6 @@ document.getElementById('cpBody').addEventListener('click', async (e) => {
     if (!cp) return;
     document.getElementById('checkpoint_id').value = cp.id;
     document.getElementById('display_name').value = cp.display_name;
-    document.getElementById('collector_name').value = cp.collector_name || '';
     document.getElementById('checkpoint_type').value = cp.checkpoint_type;
   }
 
@@ -494,20 +556,6 @@ document.getElementById('cpBody').addEventListener('click', async (e) => {
     document.getElementById('cpStatus').className = out.ok ? 'status ok' : 'status warn';
     await loadContext();
   }
-});
-
-document.getElementById('distanceForm').addEventListener('submit', async (e) => {
-  e.preventDefault();
-  const out = await post('save_distance', {
-    site_id: selectedSiteId(),
-    from_checkpoint_id: document.getElementById('from_cp').value,
-    to_checkpoint_id: document.getElementById('to_cp').value,
-    distance_miles: document.getElementById('distance_miles').value,
-  });
-  document.getElementById('distanceStatus').textContent = out.ok ? 'Distance saved.' : out.error;
-  document.getElementById('distanceStatus').className = out.ok ? 'status ok' : 'status warn';
-  if (out.ok) document.getElementById('distance_miles').value = '';
-  await loadContext();
 });
 
 loadContext();
