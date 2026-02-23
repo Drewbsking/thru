@@ -63,7 +63,7 @@ render_head('Dashboard');
 <section class="card" style="margin-top:1rem;">
   <h2>Cut-Through Matches</h2>
   <table>
-    <thead><tr><th>In Event #</th><th>Out Event #</th><th>In</th><th>Out</th><th>Elapsed</th><th>Expected</th><th>Avg Speed</th><th>Confidence</th></tr></thead>
+    <thead><tr><th>In Event #</th><th>Out Event #</th><th>Elapsed</th><th>Expected</th><th>Avg Speed</th><th>Confidence</th></tr></thead>
     <tbody id="matchBody"></tbody>
   </table>
 </section>
@@ -210,19 +210,17 @@ async function loadDashboard() {
   matchBody.innerHTML = '';
   const routeGroups = groupMatchesByRoute(json.matches || []);
   if (routeGroups.length === 0) {
-    matchBody.innerHTML = '<tr><td colspan="8">No cut-through matches in this period.</td></tr>';
+    matchBody.innerHTML = '<tr><td colspan="6">No cut-through matches in this period.</td></tr>';
   } else {
     for (const [route, matches] of routeGroups) {
       const section = document.createElement('tr');
-      section.innerHTML = `<td colspan="8" style="background:#eef2ff; font-weight:700;">${route} (${matches.length})</td>`;
+      section.innerHTML = `<td colspan="6" style="background:#eef2ff; font-weight:700;">${route} (${matches.length})</td>`;
       matchBody.appendChild(section);
 
       matches.forEach((m) => {
         const tr = document.createElement('tr');
         tr.innerHTML = `<td>${m.in_event.id}</td>
           <td>${m.out_event.id}</td>
-          <td>${m.in_event.checkpoint_name} ${formatEtDateTime(m.in_event.event_time)}</td>
-          <td>${m.out_event.checkpoint_name} ${formatEtDateTime(m.out_event.event_time)}</td>
           <td>${m.elapsed_minutes} min</td>
           <td>${m.expected_minutes} min</td>
           <td>${m.avg_speed_mph} mph</td>
