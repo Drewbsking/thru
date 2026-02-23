@@ -11,6 +11,8 @@ require_auth_page();
 
 function render_head(string $title): void
 {
+    $isLoggedIn = is_authenticated() || is_dashboard_viewer();
+
     echo '<!DOCTYPE html><html lang="en"><head>';
     echo '<meta charset="UTF-8">';
     echo '<meta name="viewport" content="width=device-width, initial-scale=1.0">';
@@ -22,16 +24,23 @@ function render_head(string $title): void
     echo '<nav class="nav">';
     if (is_dashboard_viewer()) {
         echo '<a href="dashboard.php">Dashboard</a>';
-    } else {
-        echo '<a href="index.php">Home</a>';
-        echo '<a href="dashboard.php">Dashboard</a>';
-        echo '<a href="details.php">Cut-Through Details</a>';
         echo '<a href="about.php">About</a>';
-        if (is_admin()) {
-            echo '<a href="setup.php">Site Setup</a>';
+    } else {
+        echo '<a href="about.php">About</a>';
+        if ($isLoggedIn) {
+            echo '<a href="index.php">Home</a>';
+            echo '<a href="dashboard.php">Dashboard</a>';
+            echo '<a href="details.php">Cut-Through Details</a>';
+            if (is_admin()) {
+                echo '<a href="setup.php">Site Setup</a>';
+            }
         }
     }
-    echo '<a href="logout.php">Logout</a>';
+    if ($isLoggedIn) {
+        echo '<a href="logout.php">Logout</a>';
+    } else {
+        echo '<a href="login.php">Login</a>';
+    }
     echo '</nav></header>';
     echo '<main class="page">';
 }

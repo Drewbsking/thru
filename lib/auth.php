@@ -157,12 +157,16 @@ function logout_user(): void
 
 function require_auth_page(): void
 {
+    $script = current_script_basename();
+    if ($script === 'about.php') {
+        return;
+    }
+
     if (is_authenticated()) {
         return;
     }
     if (is_dashboard_viewer()) {
-        $script = current_script_basename();
-        if ($script === 'dashboard.php' || $script === 'logout.php') {
+        if ($script === 'dashboard.php' || $script === 'logout.php' || $script === 'about.php') {
             return;
         }
         header('Location: dashboard.php', true, 302);

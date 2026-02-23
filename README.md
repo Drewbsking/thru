@@ -5,7 +5,7 @@
 - `logout.php`: Ends the session.
 - `index.php`: Home page with site + checkpoint launch links.
 - `entry.php`: Checkpoint-locked vehicle entry form.
-- `dashboard.php`: Live dashboard (10s polling by default).
+- `dashboard.php`: Live dashboard (10s polling by default) with formal AM+PM PDF report download.
 - `details.php`: Matched cut-through details and CSV export.
 - `setup.php`: Admin-only page for site setup, collector accounts, checkpoint assignments, and matching settings.
 
@@ -68,3 +68,4 @@
 - Works on shared PHP/MySQL hosting.
 - Uploads are stored in `uploads/site-images`.
 - To load demo data quickly in phpMyAdmin: run `sql/seed_seeded_site.sql`, then open Dashboard.
+- Formal PDF report is generated client-side from live report data using `jsPDF` + `AutoTable` CDN scripts.

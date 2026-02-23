@@ -13,6 +13,7 @@ $studyPeriod = strtolower(trim((string)($_GET['study_period'] ?? 'morning')));
 if (!in_array($studyPeriod, ['morning', 'afternoon'], true)) {
     $studyPeriod = 'morning';
 }
+$includeAllEvents = ((string)($_GET['include_all_events'] ?? '0')) === '1';
 
 $studyDate = trim((string)($_GET['study_date'] ?? date('Y-m-d')));
 $dateObj = DateTime::createFromFormat('Y-m-d', $studyDate);
@@ -29,6 +30,12 @@ $speedMph = (float)app_setting('speed_mph', '25');
 $bufferMinutes = (float)app_setting('buffer_minutes', '1');
 $minConfidence = (int)app_setting('min_confidence', '70');
 $policyThreshold = (float)app_setting('policy_cut_through_percent', '25');
+
+$checkpointStmt = db_prepare('SELECT id, checkpoint_code, display_name FROM checkpoints WHERE site_id = ? AND is_active = 1 ORDER BY CAST(checkpoint_code AS UNSIGNED) ASC, checkpoint_code ASC');
+$checkpointStmt->bind_param('i', $siteId);
+$checkpointStmt->execute();
+$checkpointList = $checkpointStmt->get_result()?->fetch_all(MYSQLI_ASSOC) ?: [];
+$checkpointStmt->close();
 
 $eventStmt = db_prepare('SELECT e.id, e.site_id, e.checkpoint_id, c.display_name AS checkpoint_name, c.checkpoint_code, e.direction, e.plate_raw, e.plate_norm, e.vehicle_type, e.vehicle_color, e.notes, e.observer_name, e.event_time FROM traffic_events e INNER JOIN checkpoints c ON c.id = e.checkpoint_id WHERE e.site_id = ? AND e.event_time >= ? AND e.event_time <= ? ORDER BY e.event_time ASC');
 $eventStmt->bind_param('iss', $siteId, $from, $to);
@@ -95,10 +102,12 @@ json_response([
         'local_arrivals_count' => count($analysis['unmatched_in']),
         'local_departures_count' => count($analysis['unmatched_out']),
     ],
+    'checkpoints' => $checkpointList,
     'checkpoint_counts' => $checkpointCounts,
     'checkpoint_counts_by_id' => array_values($checkpointCountsById),
     'matches' => $analysis['matches'],
     'unmatched_in' => $analysis['unmatched_in'],
     'unmatched_out' => $analysis['unmatched_out'],
     'recent_events' => $recent,
+    'all_events' => $includeAllEvents ? $events : [],
 ]);
