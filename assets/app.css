@@ -392,6 +392,59 @@ code.inline {
   }
 }
 
+@media (max-width: 430px) {
+  .direction-chip-grid {
+    max-width: none;
+    gap: 0.35rem;
+  }
+
+  .direction-chip > span {
+    min-height: 64px;
+    padding: 0.35rem 0.4rem;
+    gap: 0.12rem;
+  }
+
+  .direction-chip .direction-icon .direction-icon-img {
+    width: 22px;
+    height: 22px;
+  }
+
+  .direction-chip .direction-name {
+    font-size: 0.85rem;
+  }
+
+  .vehicle-type-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 0.35rem;
+  }
+
+  .vehicle-type-chip > span {
+    min-height: 82px;
+    padding: 0.35rem 0.3rem;
+    gap: 0.16rem;
+  }
+
+  .vehicle-type-chip .vehicle-icon {
+    font-size: 1.3rem;
+  }
+
+  .vehicle-type-chip .vehicle-name {
+    font-size: 0.74rem;
+    line-height: 1.1;
+  }
+
+  .color-chip-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 0.35rem;
+  }
+
+  .radio-chip.color-chip span {
+    min-height: 36px;
+    padding: 0.35rem 0.45rem;
+    font-size: 0.78rem;
+  }
+}
+
 @media (max-width: 390px) {
   .page {
     padding: 0 0.55rem;
@@ -414,10 +467,10 @@ code.inline {
   }
 
   .vehicle-type-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 
   .color-chip-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 }
