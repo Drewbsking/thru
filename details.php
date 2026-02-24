@@ -38,7 +38,7 @@ render_head('Cut-Through Details');
 <section class="card" style="margin-top:1rem;">
   <h2>Matched Cut-Through Events</h2>
   <table>
-    <thead><tr><th>In Event #</th><th>Out Event #</th><th>In Time</th><th>In CP</th><th>Out Time</th><th>Out CP</th><th>Plate</th><th>Distance</th><th>Elapsed</th><th>Expected</th><th>Avg Speed</th><th>Confidence</th><th>Vehicle</th></tr></thead>
+    <thead><tr><th>In Event #</th><th>Out Event #</th><th>In Time</th><th>In CP</th><th>Out Time</th><th>Out CP</th><th>Plate In</th><th>Plate Out</th><th>Distance</th><th>Elapsed</th><th>Expected</th><th>Avg Speed</th><th>Confidence</th><th>Score Detail</th><th>Vehicle In/Out</th></tr></thead>
     <tbody id="matchesBody"></tbody>
   </table>
 </section>
@@ -110,7 +110,7 @@ function formatEtDateTime(value) {
 }
 
 function exportCsv() {
-  const rows = [['in_event_id','out_event_id','in_time','in_checkpoint','out_time','out_checkpoint','distance_miles','elapsed_minutes','expected_minutes','avg_speed_mph','confidence','plate_in','plate_out','vehicle_type','vehicle_color']];
+  const rows = [['in_event_id','out_event_id','in_time','in_checkpoint','out_time','out_checkpoint','distance_miles','elapsed_minutes','expected_minutes','avg_speed_mph','confidence','plate_score','type_score','color_score','plate_in','plate_out','vehicle_type_in','vehicle_color_in','vehicle_type_out','vehicle_color_out']];
   for (const m of matchesCache) {
     rows.push([
       m.in_event.id,
@@ -124,10 +124,15 @@ function exportCsv() {
       m.expected_minutes,
       m.avg_speed_mph,
       m.confidence,
+      m.plate_score ?? '',
+      m.type_score ?? '',
+      m.color_score ?? '',
       m.in_event.plate_raw || '',
       m.out_event.plate_raw || '',
-      m.in_event.vehicle_type,
-      m.in_event.vehicle_color,
+      m.in_event.vehicle_type || '',
+      m.in_event.vehicle_color || '',
+      m.out_event.vehicle_type || '',
+      m.out_event.vehicle_color || '',
     ]);
   }
   const csv = rows.map(r => r.map(csvEscape).join(',')).join('\n');
@@ -159,7 +164,7 @@ async function loadDetails() {
   matchBody.innerHTML = '';
   const routeGroups = groupMatchesByRoute(matchesCache);
   if (routeGroups.length === 0) {
-    matchBody.innerHTML = '<tr><td colspan="13">No cut-through matches in this period.</td></tr>';
+    matchBody.innerHTML = '<tr><td colspan="15">No cut-through matches in this period.</td></tr>';
   } else {
     const totalVolume = Number(data?.summary?.total_volume || 0);
     for (const [route, matches] of routeGroups) {
@@ -168,16 +173,19 @@ async function loadDetails() {
         ? (matches.reduce((acc, m) => acc + Number(m?.avg_speed_mph || 0), 0) / matches.length).toFixed(2)
         : '0.00';
       const section = document.createElement('tr');
-      section.innerHTML = `<td colspan="13" style="background:#eef2ff; font-weight:700;">${route} (${matches.length}, ${legPercent}% of total volume, avg ${legAvgSpeed} mph)</td>`;
+      section.innerHTML = `<td colspan="15" style="background:#eef2ff; font-weight:700;">${route} (${matches.length}, ${legPercent}% of total volume, avg ${legAvgSpeed} mph)</td>`;
       matchBody.appendChild(section);
 
       for (const m of matches) {
-        const plate = m.in_event.plate_raw || m.out_event.plate_raw || '';
-        const vehicle = `${m.in_event.vehicle_type} / ${m.in_event.vehicle_color}`;
+        const plateIn = m.in_event.plate_raw || '';
+        const plateOut = m.out_event.plate_raw || '';
+        const vehicleIn = `${m.in_event.vehicle_type || '-'} / ${m.in_event.vehicle_color || '-'}`;
+        const vehicleOut = `${m.out_event.vehicle_type || '-'} / ${m.out_event.vehicle_color || '-'}`;
+        const scoreDetail = `P:${m.plate_score ?? 0} T:${m.type_score ?? 0} C:${m.color_score ?? 0}`;
         const tr = document.createElement('tr');
         tr.innerHTML = `<td>${m.in_event.id}</td><td>${m.out_event.id}</td><td>${formatEtDateTime(m.in_event.event_time)}</td><td>${m.in_event.checkpoint_name}</td>
-          <td>${formatEtDateTime(m.out_event.event_time)}</td><td>${m.out_event.checkpoint_name}</td><td>${plate}</td><td>${m.distance_miles}</td>
-          <td>${m.elapsed_minutes}</td><td>${m.expected_minutes}</td><td>${formatWholeSpeed(m.avg_speed_mph)} mph</td><td>${m.confidence}</td><td>${vehicle}</td>`;
+          <td>${formatEtDateTime(m.out_event.event_time)}</td><td>${m.out_event.checkpoint_name}</td><td>${plateIn}</td><td>${plateOut}</td><td>${m.distance_miles}</td>
+          <td>${m.elapsed_minutes}</td><td>${m.expected_minutes}</td><td>${formatWholeSpeed(m.avg_speed_mph)} mph</td><td>${m.confidence}</td><td>${scoreDetail}</td><td>${vehicleIn} -> ${vehicleOut}</td>`;
         matchBody.appendChild(tr);
       }
     }

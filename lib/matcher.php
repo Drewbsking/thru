@@ -37,6 +37,12 @@ function expected_minutes(float $distanceMiles, float $speedMph): float
 
 function compute_match_score(array $inEvent, array $outEvent): int
 {
+    $components = compute_match_components($inEvent, $outEvent);
+    return (int)$components['confidence'];
+}
+
+function compute_match_components(array $inEvent, array $outEvent): array
+{
     $plate = plate_similarity_score((string)($inEvent['plate_norm'] ?? ''), (string)($outEvent['plate_norm'] ?? ''));
     $inType = trim((string)($inEvent['vehicle_type'] ?? ''));
     $outType = trim((string)($outEvent['vehicle_type'] ?? ''));
@@ -58,7 +64,13 @@ function compute_match_score(array $inEvent, array $outEvent): int
         $score = max(0, $score - 20);
     }
 
-    return max(0, min(100, $score));
+    $score = max(0, min(100, $score));
+    return [
+        'plate_score' => $plate,
+        'type_score' => $type,
+        'color_score' => $color,
+        'confidence' => $score,
+    ];
 }
 
 function classify_events(array $events, array $distanceMap, float $speedMph, float $bufferMinutes, int $minConfidence): array
@@ -99,7 +111,8 @@ function classify_events(array $events, array $distanceMap, float $speedMph, flo
                 continue;
             }
 
-            $score = compute_match_score($in, $out);
+            $scoreParts = compute_match_components($in, $out);
+            $score = (int)$scoreParts['confidence'];
             $distanceMiles = (float)$distanceMap[$distKey];
             // Keep full precision for calculations; round only in UI display layers.
             $avgSpeedMph = $elapsed > 0 ? ($distanceMiles / ($elapsed / 60)) : 0.0;
@@ -111,6 +124,9 @@ function classify_events(array $events, array $distanceMap, float $speedMph, flo
                 'distance_miles' => $distanceMiles,
                 'avg_speed_mph' => $avgSpeedMph,
                 'confidence' => $score,
+                'plate_score' => (int)$scoreParts['plate_score'],
+                'type_score' => (int)$scoreParts['type_score'],
+                'color_score' => (int)$scoreParts['color_score'],
                 'in_event' => $in,
                 'out_event' => $out,
             ];
