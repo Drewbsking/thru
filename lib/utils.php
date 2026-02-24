@@ -28,6 +28,7 @@ function normalize_plate(?string $plate): string
     $plate = preg_replace('/[^A-Z0-9]/', '', $plate) ?? '';
     $plate = strtr($plate, [
         'O' => '0',
+        'Q' => '0',
         'I' => '1',
     ]);
     return $plate;
@@ -37,6 +38,7 @@ function fuzzy_plate_alias(string $plate): string
 {
     return strtr($plate, [
         'O' => '0',
+        'Q' => '0',
         'I' => '1',
         'L' => '1',
         'S' => '5',

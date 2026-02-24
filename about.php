@@ -56,7 +56,7 @@ render_head('About');
   <p class="small"><code class="inline">score = plate*0.65 + type*0.20 + color*0.15</code></p>
   <p class="small">Plate is required for new entries (first 3 characters). Blank plates are rejected.</p>
   <p class="small">Exact plate matches have a minimum confidence of 80, even if type/color disagree.</p>
-  <p class="small">Plates are normalized first (for example: <code class="inline">O -&gt; 0</code>, <code class="inline">I -&gt; 1</code>). Fuzzy aliases also treat lookalikes as similar (<code class="inline">L/1</code>, <code class="inline">S/5</code>, <code class="inline">Z/2</code>, <code class="inline">B/8</code>).</p>
+  <p class="small">Plates are normalized first (for example: <code class="inline">O -&gt; 0</code>, <code class="inline">Q -&gt; 0</code>, <code class="inline">I -&gt; 1</code>). This means <code class="inline">Q</code>, <code class="inline">O</code>, and <code class="inline">0</code> are treated as the same value during matching. Fuzzy aliases also treat lookalikes as similar (<code class="inline">L/1</code>, <code class="inline">S/5</code>, <code class="inline">Z/2</code>, <code class="inline">B/8</code>).</p>
 </section>
 
 <section class="card" style="margin-top:1rem;">
