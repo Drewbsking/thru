@@ -61,7 +61,7 @@ render_head('Dashboard');
   <h2>Checkpoint Counts</h2>
   <table>
     <thead><tr><th>Checkpoint</th><th>In</th><th>Out</th><th>Total (Two-Way)</th></tr></thead>
-    <tbody id="checkpointBody"></tbody>
+    <tbody id="checkpointBody"><tr><td colspan="4">Loading...</td></tr></tbody>
   </table>
 </section>
 
@@ -69,7 +69,7 @@ render_head('Dashboard');
   <h2>Cut-Through Matches</h2>
   <table>
     <thead><tr><th>In Event #</th><th>Out Event #</th><th>Elapsed</th><th>Expected</th><th>Avg Speed</th><th>Confidence</th></tr></thead>
-    <tbody id="matchBody"></tbody>
+    <tbody id="matchBody"><tr><td colspan="6">Loading...</td></tr></tbody>
   </table>
 </section>
 
@@ -77,7 +77,7 @@ render_head('Dashboard');
   <h2>Recent Events</h2>
   <table>
     <thead><tr><th>Event #</th><th>Time</th><th>Checkpoint</th><th>Dir</th><th>Plate</th><th>Type</th><th>Color</th><th>Observer</th></tr></thead>
-    <tbody id="recentBody"></tbody>
+    <tbody id="recentBody"><tr><td colspan="8">Loading...</td></tr></tbody>
   </table>
 </section>
 
@@ -643,6 +643,10 @@ async function downloadFormalReportPdf() {
 async function loadDashboard() {
   if (!activeSiteId || !studyPeriodSelect) return;
   const dashboardStatusEl = document.getElementById('dashboardStatus');
+  if (dashboardStatusEl) {
+    dashboardStatusEl.textContent = 'Loading dashboard data...';
+    dashboardStatusEl.className = 'status small';
+  }
   const studyPeriod = studyPeriodSelect.value;
   let json = null;
   try {

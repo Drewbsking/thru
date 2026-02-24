@@ -73,63 +73,172 @@ function compute_match_components(array $inEvent, array $outEvent): array
     ];
 }
 
+function lower_bound_int(array $values, int $target): int
+{
+    $lo = 0;
+    $hi = count($values);
+    while ($lo < $hi) {
+        $mid = (int)(($lo + $hi) / 2);
+        if ((int)$values[$mid] < $target) {
+            $lo = $mid + 1;
+        } else {
+            $hi = $mid;
+        }
+    }
+    return $lo;
+}
+
+function upper_bound_int(array $values, int $target): int
+{
+    $lo = 0;
+    $hi = count($values);
+    while ($lo < $hi) {
+        $mid = (int)(($lo + $hi) / 2);
+        if ((int)$values[$mid] <= $target) {
+            $lo = $mid + 1;
+        } else {
+            $hi = $mid;
+        }
+    }
+    return $lo;
+}
+
+function build_route_windows(array $distanceMap, float $speedMph, float $bufferMinutes): array
+{
+    $routesByFrom = [];
+    foreach ($distanceMap as $distKey => $distanceMiles) {
+        $parts = explode(':', (string)$distKey, 2);
+        if (count($parts) !== 2) {
+            continue;
+        }
+        $fromId = (int)$parts[0];
+        $toId = (int)$parts[1];
+        if ($fromId <= 0 || $toId <= 0 || $fromId === $toId) {
+            continue;
+        }
+
+        $distance = (float)$distanceMiles;
+        if (!is_finite($distance) || $distance <= 0.0) {
+            continue;
+        }
+        $expected = expected_minutes($distance, $speedMph);
+        if (!is_finite($expected) || $expected <= 0.0) {
+            continue;
+        }
+
+        $lowMinutes = max(0.0, $expected - $bufferMinutes);
+        $highMinutes = $expected + $bufferMinutes;
+        if ($highMinutes <= 0.0) {
+            continue;
+        }
+
+        $routesByFrom[$fromId][] = [
+            'to_checkpoint_id' => $toId,
+            'distance_miles' => $distance,
+            'expected_minutes' => $expected,
+            'low_seconds' => (int)floor($lowMinutes * 60.0),
+            'high_seconds' => (int)ceil($highMinutes * 60.0),
+        ];
+    }
+    return $routesByFrom;
+}
+
 function classify_events(array $events, array $distanceMap, float $speedMph, float $bufferMinutes, int $minConfidence): array
 {
     $inEvents = [];
-    $outEvents = [];
+    $allOutEvents = [];
+    $outEventsByCheckpoint = [];
+    $outTimesByCheckpoint = [];
+    $routesByFrom = build_route_windows($distanceMap, $speedMph, $bufferMinutes);
 
     foreach ($events as $event) {
-        if (($event['direction'] ?? '') === 'In') {
-            $inEvents[] = $event;
-        } elseif (($event['direction'] ?? '') === 'Out') {
-            $outEvents[] = $event;
+        $eventTs = strtotime((string)($event['event_time'] ?? ''));
+        if ($eventTs === false) {
+            continue;
+        }
+        $dir = (string)($event['direction'] ?? '');
+        $wrapped = [
+            'event' => $event,
+            'ts' => (int)$eventTs,
+        ];
+        if ($dir === 'In') {
+            $inEvents[] = $wrapped;
+            continue;
+        }
+        if ($dir === 'Out') {
+            $checkpointId = (int)($event['checkpoint_id'] ?? 0);
+            $allOutEvents[] = $wrapped;
+            if ($checkpointId > 0) {
+                if (!isset($outEventsByCheckpoint[$checkpointId])) {
+                    $outEventsByCheckpoint[$checkpointId] = [];
+                    $outTimesByCheckpoint[$checkpointId] = [];
+                }
+                $outEventsByCheckpoint[$checkpointId][] = $wrapped;
+                $outTimesByCheckpoint[$checkpointId][] = (int)$eventTs;
+            }
         }
     }
 
     $candidates = [];
+    foreach ($inEvents as $inWrap) {
+        $in = $inWrap['event'];
+        $inTs = (int)$inWrap['ts'];
+        $inCheckpointId = (int)($in['checkpoint_id'] ?? 0);
+        if ($inCheckpointId <= 0 || !isset($routesByFrom[$inCheckpointId])) {
+            continue;
+        }
 
-    foreach ($inEvents as $in) {
-        foreach ($outEvents as $out) {
-            if ((int)$in['checkpoint_id'] === (int)$out['checkpoint_id']) {
+        foreach ($routesByFrom[$inCheckpointId] as $route) {
+            $outCheckpointId = (int)$route['to_checkpoint_id'];
+            if (!isset($outEventsByCheckpoint[$outCheckpointId], $outTimesByCheckpoint[$outCheckpointId])) {
+                continue;
+            }
+            $outList = $outEventsByCheckpoint[$outCheckpointId];
+            $outTimes = $outTimesByCheckpoint[$outCheckpointId];
+            $lowTs = $inTs + (int)$route['low_seconds'];
+            $highTs = $inTs + (int)$route['high_seconds'];
+            if ($highTs < $lowTs) {
                 continue;
             }
 
-            $elapsed = (strtotime((string)$out['event_time']) - strtotime((string)$in['event_time'])) / 60;
-            if ($elapsed <= 0) {
-                continue;
-            }
+            $startIdx = lower_bound_int($outTimes, $lowTs);
+            $endIdx = upper_bound_int($outTimes, $highTs);
+            for ($i = $startIdx; $i < $endIdx; $i++) {
+                $out = $outList[$i]['event'];
+                $outTs = (int)$outList[$i]['ts'];
+                if ($inCheckpointId === (int)$out['checkpoint_id']) {
+                    continue;
+                }
 
-            $distKey = $in['checkpoint_id'] . ':' . $out['checkpoint_id'];
-            if (!isset($distanceMap[$distKey])) {
-                continue;
-            }
+                $elapsed = ($outTs - $inTs) / 60.0;
+                if ($elapsed <= 0.0) {
+                    continue;
+                }
 
-            $expected = expected_minutes((float)$distanceMap[$distKey], $speedMph);
-            $low = max(0.0, $expected - $bufferMinutes);
-            $high = $expected + $bufferMinutes;
-            if ($elapsed < $low || $elapsed > $high) {
-                continue;
-            }
+                $scoreParts = compute_match_components($in, $out);
+                $score = (int)$scoreParts['confidence'];
+                if ($score < $minConfidence) {
+                    continue;
+                }
 
-            $scoreParts = compute_match_components($in, $out);
-            $score = (int)$scoreParts['confidence'];
-            $distanceMiles = (float)$distanceMap[$distKey];
-            // Keep full precision for calculations; round only in UI display layers.
-            $avgSpeedMph = $elapsed > 0 ? ($distanceMiles / ($elapsed / 60)) : 0.0;
-            $candidates[] = [
-                'in_id' => (int)$in['id'],
-                'out_id' => (int)$out['id'],
-                'elapsed_minutes' => round($elapsed, 2),
-                'expected_minutes' => round($expected, 2),
-                'distance_miles' => $distanceMiles,
-                'avg_speed_mph' => $avgSpeedMph,
-                'confidence' => $score,
-                'plate_score' => (int)$scoreParts['plate_score'],
-                'type_score' => (int)$scoreParts['type_score'],
-                'color_score' => (int)$scoreParts['color_score'],
-                'in_event' => $in,
-                'out_event' => $out,
-            ];
+                $distanceMiles = (float)$route['distance_miles'];
+                // Keep full precision for calculations; round only in UI display layers.
+                $avgSpeedMph = $elapsed > 0.0 ? ($distanceMiles / ($elapsed / 60.0)) : 0.0;
+                $candidates[] = [
+                    'in_id' => (int)$in['id'],
+                    'out_id' => (int)$out['id'],
+                    'elapsed_minutes' => round($elapsed, 2),
+                    'expected_minutes' => round((float)$route['expected_minutes'], 2),
+                    'distance_miles' => $distanceMiles,
+                    'avg_speed_mph' => $avgSpeedMph,
+                    'confidence' => $score,
+                    'plate_score' => (int)$scoreParts['plate_score'],
+                    'type_score' => (int)$scoreParts['type_score'],
+                    'color_score' => (int)$scoreParts['color_score'],
+                    'in_event' => $in,
+                    'out_event' => $out,
+                ];
+            }
         }
     }
 
@@ -156,8 +265,21 @@ function classify_events(array $events, array $distanceMap, float $speedMph, flo
         $matches[] = $candidate;
     }
 
-    $unmatchedIn = array_values(array_filter($inEvents, static fn(array $e): bool => !isset($usedIn[(int)$e['id']])));
-    $unmatchedOut = array_values(array_filter($outEvents, static fn(array $e): bool => !isset($usedOut[(int)$e['id']])));
+    $unmatchedIn = [];
+    foreach ($inEvents as $inWrap) {
+        $inEvent = $inWrap['event'];
+        if (!isset($usedIn[(int)$inEvent['id']])) {
+            $unmatchedIn[] = $inEvent;
+        }
+    }
+
+    $unmatchedOut = [];
+    foreach ($allOutEvents as $outWrap) {
+        $outEvent = $outWrap['event'];
+        if (!isset($usedOut[(int)$outEvent['id']])) {
+            $unmatchedOut[] = $outEvent;
+        }
+    }
 
     $totalVolume = count($matches) + count($unmatchedIn) + count($unmatchedOut);
     $cutThroughCount = count($matches);
