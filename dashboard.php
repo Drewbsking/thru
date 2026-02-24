@@ -11,6 +11,7 @@ render_head('Dashboard');
 <section class="card">
   <p class="small">Auto-refreshes every <span id="pollLabel">10</span> seconds. Cut-through is calculated with expected travel time from checkpoint distance and speed setting.</p>
   <p class="small">All times shown in Eastern Time (ET).</p>
+  <p class="small" id="studyDateLabel"></p>
   <?php if (!$activeSite): ?>
     <p class="status warn">No active site is configured. Set one in Site Setup.</p>
   <?php else: ?>
@@ -596,6 +597,17 @@ async function loadDashboard() {
   const json = await res.json();
   if (!json.ok) return;
 
+  const studyDateLabel = document.getElementById('studyDateLabel');
+  if (studyDateLabel) {
+    const usedDate = formatEtDateOnly(json.study_date);
+    const requestedDate = formatEtDateOnly(json.requested_study_date);
+    if (json.requested_study_date && json.study_date && json.requested_study_date !== json.study_date) {
+      studyDateLabel.textContent = `Study Date: ${usedDate} (auto-selected latest date with data; requested ${requestedDate})`;
+    } else {
+      studyDateLabel.textContent = `Study Date: ${usedDate}`;
+    }
+  }
+
   pollMs = Math.max(5000, Number(json.settings.poll_seconds || 10) * 1000);
   document.getElementById('pollLabel').textContent = String(pollMs / 1000);
 
@@ -623,11 +635,16 @@ async function loadDashboard() {
 
   const cpBody = document.getElementById('checkpointBody');
   cpBody.innerHTML = '';
-  Object.entries(json.checkpoint_counts).forEach(([name, c]) => {
-    const tr = document.createElement('tr');
-    tr.innerHTML = `<td>${name}</td><td>${c.in}</td><td>${c.out}</td><td>${c.total}</td>`;
-    cpBody.appendChild(tr);
-  });
+  const cpEntries = Object.entries(json.checkpoint_counts || {});
+  if (cpEntries.length === 0) {
+    cpBody.innerHTML = '<tr><td colspan="4">No events in this study period/date.</td></tr>';
+  } else {
+    cpEntries.forEach(([name, c]) => {
+      const tr = document.createElement('tr');
+      tr.innerHTML = `<td>${name}</td><td>${c.in}</td><td>${c.out}</td><td>${c.total}</td>`;
+      cpBody.appendChild(tr);
+    });
+  }
 
   const matchBody = document.getElementById('matchBody');
   matchBody.innerHTML = '';
@@ -655,11 +672,15 @@ async function loadDashboard() {
 
   const recentBody = document.getElementById('recentBody');
   recentBody.innerHTML = '';
-  json.recent_events.forEach(e => {
-    const tr = document.createElement('tr');
-    tr.innerHTML = `<td>${e.id}</td><td>${formatEtDateTime(e.event_time)}</td><td>${e.checkpoint_name}</td><td>${e.direction}</td><td>${e.plate_raw || ''}</td><td>${e.vehicle_type}</td><td>${e.vehicle_color}</td><td>${e.observer_name || ''}</td>`;
-    recentBody.appendChild(tr);
-  });
+  if (!(json.recent_events || []).length) {
+    recentBody.innerHTML = '<tr><td colspan="8">No recent events in this study period/date.</td></tr>';
+  } else {
+    json.recent_events.forEach(e => {
+      const tr = document.createElement('tr');
+      tr.innerHTML = `<td>${e.id}</td><td>${formatEtDateTime(e.event_time)}</td><td>${e.checkpoint_name}</td><td>${e.direction}</td><td>${e.plate_raw || ''}</td><td>${e.vehicle_type}</td><td>${e.vehicle_color}</td><td>${e.observer_name || ''}</td>`;
+      recentBody.appendChild(tr);
+    });
+  }
 
   if (timer) clearTimeout(timer);
   timer = setTimeout(loadDashboard, pollMs);

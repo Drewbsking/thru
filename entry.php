@@ -507,8 +507,8 @@ if (form) {
     const direction = selectedRadioValue('direction');
     const vehicleType = selectedRadioValue('vehicle_type');
     const vehicleColor = selectedVehicleColor();
-    if (!direction || !vehicleType || !vehicleColor) {
-      statusEl.textContent = 'Select In/Out, vehicle type, and color.';
+    if (!direction) {
+      statusEl.textContent = 'Select In/Out.';
       statusEl.className = 'status warn';
       return;
     }

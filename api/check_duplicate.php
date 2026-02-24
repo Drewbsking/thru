@@ -16,7 +16,7 @@ $vehicleColor = trim((string)($_POST['vehicle_color'] ?? ''));
 $plateNorm = normalize_plate((string)($_POST['plate'] ?? ''));
 $plateNorm = substr($plateNorm, 0, 3);
 
-if ($siteId <= 0 || $checkpointId <= 0 || $vehicleType === '' || $vehicleColor === '') {
+if ($siteId <= 0 || $checkpointId <= 0) {
     json_response(['ok' => false, 'error' => 'Missing fields.'], 422);
 }
 if (strlen($plateNorm) !== 3) {
@@ -38,11 +38,14 @@ foreach ($allowedColors as $color) {
 }
 $typeKey = strtolower($vehicleType);
 $colorKey = strtolower($vehicleColor);
-if (!isset($typeMap[$typeKey]) || !isset($colorMap[$colorKey])) {
-    json_response(['ok' => false, 'error' => 'Invalid vehicle type or color.'], 422);
+if ($vehicleType !== '' && !isset($typeMap[$typeKey])) {
+    json_response(['ok' => false, 'error' => 'Invalid vehicle type.'], 422);
 }
-$vehicleType = $typeMap[$typeKey];
-$vehicleColor = $colorMap[$colorKey];
+if ($vehicleColor !== '' && !isset($colorMap[$colorKey])) {
+    json_response(['ok' => false, 'error' => 'Invalid vehicle color.'], 422);
+}
+$vehicleType = $vehicleType !== '' ? $typeMap[$typeKey] : '';
+$vehicleColor = $vehicleColor !== '' ? $colorMap[$colorKey] : '';
 
 $threshold = date('Y-m-d H:i:s', time() - 20);
 $stmt = db_prepare('SELECT id, event_time, plate_raw FROM traffic_events WHERE site_id = ? AND checkpoint_id = ? AND direction = ? AND vehicle_type = ? AND vehicle_color = ? AND event_time >= ? ORDER BY id DESC LIMIT 1');

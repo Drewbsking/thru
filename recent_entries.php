@@ -210,8 +210,14 @@ async function loadRecentEntries() {
 
   recentEntryBody.innerHTML = '';
   for (const e of (data.events || [])) {
-    const typeOptions = vehicleTypeOptions.map((opt) => `<option value="${escapeHtml(opt)}"${opt === e.vehicle_type ? ' selected' : ''}>${escapeHtml(opt)}</option>`).join('');
-    const colorOptions = vehicleColorOptions.map((opt) => `<option value="${escapeHtml(opt)}"${opt === e.vehicle_color ? ' selected' : ''}>${escapeHtml(opt)}</option>`).join('');
+    const selectedType = String(e.vehicle_type || '');
+    const selectedColor = String(e.vehicle_color || '');
+    const typeOptions = [`<option value=""${selectedType === '' ? ' selected' : ''}>(None)</option>`]
+      .concat(vehicleTypeOptions.map((opt) => `<option value="${escapeHtml(opt)}"${opt === selectedType ? ' selected' : ''}>${escapeHtml(opt)}</option>`))
+      .join('');
+    const colorOptions = [`<option value=""${selectedColor === '' ? ' selected' : ''}>(None)</option>`]
+      .concat(vehicleColorOptions.map((opt) => `<option value="${escapeHtml(opt)}"${opt === selectedColor ? ' selected' : ''}>${escapeHtml(opt)}</option>`))
+      .join('');
     const tr = document.createElement('tr');
     tr.innerHTML = `<td>${e.id}</td>
       <td>${escapeHtml(formatEtDateTime(e.event_time))}</td>
@@ -228,8 +234,8 @@ async function loadRecentEntries() {
     tr.dataset.editing = 'false';
     tr.dataset.direction = String(e.direction || 'In');
     tr.dataset.plateRaw = String(e.plate_raw || '');
-    tr.dataset.vehicleType = String(e.vehicle_type || 'Sedan');
-    tr.dataset.vehicleColor = String(e.vehicle_color || 'White');
+    tr.dataset.vehicleType = String(e.vehicle_type || '');
+    tr.dataset.vehicleColor = String(e.vehicle_color || '');
     tr.dataset.notes = String(e.notes || '');
     tr.dataset.typeOptions = typeOptions;
     tr.dataset.colorOptions = colorOptions;
@@ -368,12 +374,6 @@ if (recentEntryBody) {
       const vehicleType = tr.querySelector('[data-input="vehicle_type"]')?.value || '';
       const vehicleColor = tr.querySelector('[data-input="vehicle_color"]')?.value || '';
       const notes = (tr.querySelector('[data-input="notes"]')?.value || '').toUpperCase();
-
-      if (!vehicleType || !vehicleColor) {
-        statusEl.textContent = 'Type and color are required.';
-        statusEl.className = 'status warn';
-        return;
-      }
 
       const fd = new FormData();
       fd.append('action', 'edit');

@@ -38,8 +38,12 @@ function expected_minutes(float $distanceMiles, float $speedMph): float
 function compute_match_score(array $inEvent, array $outEvent): int
 {
     $plate = plate_similarity_score((string)($inEvent['plate_norm'] ?? ''), (string)($outEvent['plate_norm'] ?? ''));
-    $type = strcasecmp((string)$inEvent['vehicle_type'], (string)$outEvent['vehicle_type']) === 0 ? 100 : 0;
-    $color = strcasecmp((string)$inEvent['vehicle_color'], (string)$outEvent['vehicle_color']) === 0 ? 100 : 0;
+    $inType = trim((string)($inEvent['vehicle_type'] ?? ''));
+    $outType = trim((string)($outEvent['vehicle_type'] ?? ''));
+    $inColor = trim((string)($inEvent['vehicle_color'] ?? ''));
+    $outColor = trim((string)($outEvent['vehicle_color'] ?? ''));
+    $type = ($inType !== '' && $outType !== '' && strcasecmp($inType, $outType) === 0) ? 100 : 0;
+    $color = ($inColor !== '' && $outColor !== '' && strcasecmp($inColor, $outColor) === 0) ? 100 : 0;
 
     // Weighted confidence: plate has highest influence, type/color stabilize noisy captures.
     $score = (int)round(($plate * 0.65) + ($type * 0.2) + ($color * 0.15));

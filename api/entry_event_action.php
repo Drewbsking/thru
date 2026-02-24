@@ -62,14 +62,14 @@ if ($action === 'edit') {
     }
     $typeKey = strtolower($vehicleType);
     $colorKey = strtolower($vehicleColor);
-    if (!isset($typeMap[$typeKey])) {
+    if ($vehicleType !== '' && !isset($typeMap[$typeKey])) {
         json_response(['ok' => false, 'error' => 'Invalid vehicle type.'], 422);
     }
-    if (!isset($colorMap[$colorKey])) {
+    if ($vehicleColor !== '' && !isset($colorMap[$colorKey])) {
         json_response(['ok' => false, 'error' => 'Invalid vehicle color.'], 422);
     }
-    $vehicleType = $typeMap[$typeKey];
-    $vehicleColor = $colorMap[$colorKey];
+    $vehicleType = $vehicleType !== '' ? $typeMap[$typeKey] : '';
+    $vehicleColor = $vehicleColor !== '' ? $colorMap[$colorKey] : '';
 
     $plate = normalize_plate($plate);
     $plate = substr($plate, 0, 3);

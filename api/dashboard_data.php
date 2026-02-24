@@ -15,7 +15,9 @@ if (!in_array($studyPeriod, ['morning', 'afternoon'], true)) {
 }
 $includeAllEvents = ((string)($_GET['include_all_events'] ?? '0')) === '1';
 
-$studyDate = trim((string)($_GET['study_date'] ?? date('Y-m-d')));
+$studyDateProvided = isset($_GET['study_date']) && trim((string)$_GET['study_date']) !== '';
+$requestedStudyDate = trim((string)($_GET['study_date'] ?? date('Y-m-d')));
+$studyDate = $requestedStudyDate;
 $dateObj = DateTime::createFromFormat('Y-m-d', $studyDate);
 if (!$dateObj || $dateObj->format('Y-m-d') !== $studyDate) {
     $studyDate = date('Y-m-d');
@@ -37,11 +39,30 @@ $checkpointStmt->execute();
 $checkpointList = $checkpointStmt->get_result()?->fetch_all(MYSQLI_ASSOC) ?: [];
 $checkpointStmt->close();
 
-$eventStmt = db_prepare('SELECT e.id, e.site_id, e.checkpoint_id, c.display_name AS checkpoint_name, c.checkpoint_code, e.direction, e.plate_raw, e.plate_norm, e.vehicle_type, e.vehicle_color, e.notes, e.observer_name, e.event_time FROM traffic_events e INNER JOIN checkpoints c ON c.id = e.checkpoint_id WHERE e.site_id = ? AND e.event_time >= ? AND e.event_time <= ? ORDER BY e.event_time ASC');
-$eventStmt->bind_param('iss', $siteId, $from, $to);
-$eventStmt->execute();
-$events = $eventStmt->get_result()?->fetch_all(MYSQLI_ASSOC) ?: [];
-$eventStmt->close();
+$loadEvents = static function (int $siteId, string $from, string $to): array {
+    $eventStmt = db_prepare('SELECT e.id, e.site_id, e.checkpoint_id, c.display_name AS checkpoint_name, c.checkpoint_code, e.direction, e.plate_raw, e.plate_norm, e.vehicle_type, e.vehicle_color, e.notes, e.observer_name, e.event_time FROM traffic_events e INNER JOIN checkpoints c ON c.id = e.checkpoint_id WHERE e.site_id = ? AND e.event_time >= ? AND e.event_time <= ? ORDER BY e.event_time ASC');
+    $eventStmt->bind_param('iss', $siteId, $from, $to);
+    $eventStmt->execute();
+    $rows = $eventStmt->get_result()?->fetch_all(MYSQLI_ASSOC) ?: [];
+    $eventStmt->close();
+    return $rows;
+};
+
+$events = $loadEvents($siteId, $from, $to);
+if (!$studyDateProvided && count($events) === 0) {
+    $latestStmt = db_prepare('SELECT DATE(MAX(event_time)) AS latest_date FROM traffic_events WHERE site_id = ?');
+    $latestStmt->bind_param('i', $siteId);
+    $latestStmt->execute();
+    $latestRow = $latestStmt->get_result()?->fetch_assoc() ?: [];
+    $latestStmt->close();
+    $latestDate = trim((string)($latestRow['latest_date'] ?? ''));
+    if ($latestDate !== '' && $latestDate !== $studyDate) {
+        $studyDate = $latestDate;
+        $from = $studyDate . ' ' . $periodStart;
+        $to = $studyDate . ' ' . $periodEnd;
+        $events = $loadEvents($siteId, $from, $to);
+    }
+}
 
 $distanceMap = distance_map_for_site($siteId);
 $analysis = classify_events($events, $distanceMap, $speedMph, $bufferMinutes, $minConfidence);
@@ -83,6 +104,7 @@ json_response([
     'ok' => true,
     'site_id' => $siteId,
     'study_period' => $studyPeriod,
+    'requested_study_date' => $requestedStudyDate,
     'study_date' => $studyDate,
     'settings' => [
         'speed_mph' => $speedMph,
