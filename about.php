@@ -59,6 +59,29 @@ render_head('About');
 </section>
 
 <section class="card" style="margin-top:1rem;">
+  <h2>Confidence Examples (100 to 0)</h2>
+  <p class="small">These examples show how the formula behaves. “Plate Similarity” is 0–100, Type/Color are either match (100) or mismatch (0). Final score is rounded to an integer.</p>
+  <table>
+    <thead><tr><th>Plate Similarity</th><th>Type Match?</th><th>Color Match?</th><th>Confidence</th></tr></thead>
+    <tbody>
+      <tr><td>100</td><td>Yes</td><td>Yes</td><td>100</td></tr>
+      <tr><td>80</td><td>Yes</td><td>Yes</td><td>87</td></tr>
+      <tr><td>100</td><td>Yes</td><td>No</td><td>85</td></tr>
+      <tr><td>100</td><td>No</td><td>Yes</td><td>80</td></tr>
+      <tr><td>60</td><td>Yes</td><td>Yes</td><td>74</td></tr>
+      <tr><td>100</td><td>No</td><td>No</td><td>65</td></tr>
+      <tr><td>40</td><td>Yes</td><td>Yes</td><td>61</td></tr>
+      <tr><td>20</td><td>Yes</td><td>Yes</td><td>48</td></tr>
+      <tr><td>0</td><td>Yes</td><td>Yes</td><td>35</td></tr>
+      <tr><td>0</td><td>Yes</td><td>No</td><td>20</td></tr>
+      <tr><td>0</td><td>No</td><td>Yes</td><td>15</td></tr>
+      <tr><td>0</td><td>No</td><td>No</td><td>0</td></tr>
+    </tbody>
+  </table>
+  <p class="small">Blank-plate penalty: if the In plate is blank but the Out plate is present, the score is reduced by 20 (minimum 0).</p>
+</section>
+
+<section class="card" style="margin-top:1rem;">
   <h2>All Matching Scenarios</h2>
   <table>
     <thead><tr><th>Scenario</th><th>Example</th><th>Result</th></tr></thead>
