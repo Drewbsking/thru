@@ -101,7 +101,8 @@ function classify_events(array $events, array $distanceMap, float $speedMph, flo
 
             $score = compute_match_score($in, $out);
             $distanceMiles = (float)$distanceMap[$distKey];
-            $avgSpeedMph = $elapsed > 0 ? round($distanceMiles / ($elapsed / 60), 2) : 0.0;
+            // Keep full precision for calculations; round only in UI display layers.
+            $avgSpeedMph = $elapsed > 0 ? ($distanceMiles / ($elapsed / 60)) : 0.0;
             $candidates[] = [
                 'in_id' => (int)$in['id'],
                 'out_id' => (int)$out['id'],

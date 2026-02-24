@@ -102,6 +102,12 @@ function kpiCard(label, value, css='') {
   return `<article class="card"><div class="kpi ${css}">${value}</div><div class="kpi-label">${label}</div></article>`;
 }
 
+function formatWholeSpeed(value) {
+  const n = Number(value);
+  if (!Number.isFinite(n)) return '0';
+  return String(Math.round(n));
+}
+
 function matchRouteKey(match) {
   const inName = String(match?.in_event?.checkpoint_name || match?.in_event?.checkpoint_code || 'In').trim();
   const outName = String(match?.out_event?.checkpoint_name || match?.out_event?.checkpoint_code || 'Out').trim();
@@ -167,8 +173,8 @@ function renderPairChart(matches, totalVolume = 0) {
   }).join('');
 }
 
-function formatKpiDateTime(value) {
-  return formatEtDateTime(value, true);
+function formatKpiTime(value) {
+  return formatEtTimeOnly(value);
 }
 
 function formatEtDateTime(value, longMonth = false) {
@@ -185,6 +191,18 @@ function formatEtDateTime(value, longMonth = false) {
   const ampm = hour24 >= 12 ? 'PM' : 'AM';
   const hour12 = (hour24 % 12) || 12;
   return `${monthName} ${day}, ${year}, ${hour12}:${minute} ${ampm} ET`;
+}
+
+function formatEtTimeOnly(value) {
+  const raw = String(value || '').trim();
+  if (!raw) return '--';
+  const m = raw.match(/^(\d{4})-(\d{2})-(\d{2})[ T](\d{2}):(\d{2})(?::\d{2})?$/);
+  if (!m) return raw;
+  const hour24 = Number(m[4]);
+  const minute = m[5];
+  const ampm = hour24 >= 12 ? 'PM' : 'AM';
+  const hour12 = (hour24 % 12) || 12;
+  return `${hour12}:${minute} ${ampm} ET`;
 }
 
 function formatEtDateOnly(ymd) {
@@ -358,7 +376,7 @@ function matchRows(matches) {
       route,
       `${m?.elapsed_minutes ?? ''} min`,
       `${m?.expected_minutes ?? ''} min`,
-      `${m?.avg_speed_mph ?? ''} mph`,
+      `${formatWholeSpeed(m?.avg_speed_mph)} mph`,
       String(m?.confidence ?? ''),
     ];
   });
@@ -634,8 +652,9 @@ async function loadDashboard() {
   const policyClass = summary.meets_policy ? 'ok' : 'warn';
   const totalVolume = Number(summary.total_volume || 0);
   const vehiclesPerHour = Number(summary.vehicles_per_hour || 0).toFixed(2);
-  const startTime = formatKpiDateTime(summary.start_time);
-  const endTime = formatKpiDateTime(summary.end_time);
+  const studyDate = formatEtDateOnly(json.study_date);
+  const startTime = formatKpiTime(summary.start_time);
+  const endTime = formatKpiTime(summary.end_time);
   const avgMatchConfidence = Number(summary.avg_match_confidence ?? (
     json.matches.length
       ? (json.matches.reduce((acc, m) => acc + Number(m.confidence || 0), 0) / json.matches.length)
@@ -645,6 +664,7 @@ async function loadDashboard() {
   const topPair = pairCounts[0] || null;
 
   document.getElementById('kpis').innerHTML = [
+    kpiCard('Study Date', studyDate),
     kpiCard('Start Time (First Entry)', startTime),
     kpiCard('End Time (Last Entry)', endTime),
     kpiCard('Total (Two-Way)', summary.total_volume),
@@ -693,7 +713,7 @@ async function loadDashboard() {
           <td>${m.out_event.id}</td>
           <td>${m.elapsed_minutes} min</td>
           <td>${m.expected_minutes} min</td>
-          <td>${m.avg_speed_mph} mph</td>
+          <td>${formatWholeSpeed(m.avg_speed_mph)} mph</td>
           <td>${m.confidence}</td>`;
         matchBody.appendChild(tr);
       });
