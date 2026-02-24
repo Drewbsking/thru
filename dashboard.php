@@ -405,10 +405,12 @@ function summaryRowsForPeriod(data) {
       ? ((data.matches || []).reduce((acc, m) => acc + Number(m.confidence || 0), 0) / data.matches.length)
       : 0
   )).toFixed(2);
+  const vehiclesPerHour = Number(summary.vehicles_per_hour ?? 0).toFixed(2);
   return [
     ['Start Time (First Entry)', formatEtDateTime(summary.start_time, true)],
     ['End Time (Last Entry)', formatEtDateTime(summary.end_time, true)],
     ['Total Volume (Two-Way)', String(summary.total_volume ?? 0)],
+    ['Vehicles Per Hour', `${vehiclesPerHour} veh/hr`],
     ['Cut-Through Vehicles', String(summary.cut_through_count ?? 0)],
     ['Avg Match Confidence', `${avgMatchConfidence}%`],
     ['Policy Status', summary.meets_policy ? 'Meets 25% Policy' : 'Below 25% Policy'],
@@ -631,6 +633,7 @@ async function loadDashboard() {
   const policyStatus = summary.meets_policy ? 'Meets 25% Policy' : 'Below 25% Policy';
   const policyClass = summary.meets_policy ? 'ok' : 'warn';
   const totalVolume = Number(summary.total_volume || 0);
+  const vehiclesPerHour = Number(summary.vehicles_per_hour || 0).toFixed(2);
   const startTime = formatKpiDateTime(summary.start_time);
   const endTime = formatKpiDateTime(summary.end_time);
   const avgMatchConfidence = Number(summary.avg_match_confidence ?? (
@@ -645,6 +648,7 @@ async function loadDashboard() {
     kpiCard('Start Time (First Entry)', startTime),
     kpiCard('End Time (Last Entry)', endTime),
     kpiCard('Total (Two-Way)', summary.total_volume),
+    kpiCard('Vehicles Per Hour', `${vehiclesPerHour} veh/hr`),
     kpiCard('Cut-Through Vehicles', summary.cut_through_count),
     kpiCard('Top Leg % (Of Total)', topPair ? topPair.percent_label : '0.00%'),
     kpiCard('Top Leg Avg Speed', topPair ? topPair.avg_speed_label : '0.00 mph'),

@@ -107,6 +107,19 @@ foreach ($events as $event) {
 $recent = array_reverse(array_slice($events, -50));
 $firstEventTime = count($events) > 0 ? (string)$events[0]['event_time'] : null;
 $lastEventTime = count($events) > 0 ? (string)$events[count($events) - 1]['event_time'] : null;
+$vehiclesPerHour = 0.0;
+$studyDurationMinutes = 0.0;
+if ($firstEventTime !== null && $lastEventTime !== null) {
+    $firstTs = strtotime($firstEventTime);
+    $lastTs = strtotime($lastEventTime);
+    if ($firstTs !== false && $lastTs !== false && $lastTs > $firstTs) {
+        $studyDurationMinutes = round(($lastTs - $firstTs) / 60, 2);
+        $hours = ($lastTs - $firstTs) / 3600;
+        if ($hours > 0) {
+            $vehiclesPerHour = round(((float)$analysis['total_volume']) / $hours, 2);
+        }
+    }
+}
 
 json_response([
     'ok' => true,
@@ -126,6 +139,8 @@ json_response([
         'start_time' => $firstEventTime,
         'end_time' => $lastEventTime,
         'total_volume' => $analysis['total_volume'],
+        'vehicles_per_hour' => $vehiclesPerHour,
+        'study_duration_minutes' => $studyDurationMinutes,
         'cut_through_count' => $analysis['cut_through_count'],
         'cut_through_percent' => $analysis['cut_through_percent'],
         'avg_match_confidence' => $avgMatchConfidence,
