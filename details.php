@@ -72,9 +72,9 @@ function csvEscape(v) {
 }
 
 function matchRouteKey(match) {
-  const inCode = match?.in_event?.checkpoint_code || match?.in_event?.checkpoint_name || 'In';
-  const outCode = match?.out_event?.checkpoint_code || match?.out_event?.checkpoint_name || 'Out';
-  return `${inCode} -> ${outCode}`;
+  const inName = String(match?.in_event?.checkpoint_name || match?.in_event?.checkpoint_code || 'In').trim();
+  const outName = String(match?.out_event?.checkpoint_name || match?.out_event?.checkpoint_code || 'Out').trim();
+  return `${inName} to ${outName}`;
 }
 
 function groupMatchesByRoute(matches) {
@@ -155,9 +155,11 @@ async function loadDetails() {
   if (routeGroups.length === 0) {
     matchBody.innerHTML = '<tr><td colspan="12">No cut-through matches in this period.</td></tr>';
   } else {
+    const totalVolume = Number(data?.summary?.total_volume || 0);
     for (const [route, matches] of routeGroups) {
+      const legPercent = totalVolume > 0 ? ((matches.length / totalVolume) * 100).toFixed(2) : '0.00';
       const section = document.createElement('tr');
-      section.innerHTML = `<td colspan="12" style="background:#eef2ff; font-weight:700;">${route} (${matches.length})</td>`;
+      section.innerHTML = `<td colspan="12" style="background:#eef2ff; font-weight:700;">${route} (${matches.length}, ${legPercent}% of total volume)</td>`;
       matchBody.appendChild(section);
 
       for (const m of matches) {

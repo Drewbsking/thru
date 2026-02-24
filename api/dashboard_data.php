@@ -66,6 +66,14 @@ if (!$studyDateProvided && count($events) === 0) {
 
 $distanceMap = distance_map_for_site($siteId);
 $analysis = classify_events($events, $distanceMap, $speedMph, $bufferMinutes, $minConfidence);
+$avgMatchConfidence = 0.0;
+if (count($analysis['matches']) > 0) {
+    $confidenceSum = 0.0;
+    foreach ($analysis['matches'] as $match) {
+        $confidenceSum += (float)($match['confidence'] ?? 0);
+    }
+    $avgMatchConfidence = round($confidenceSum / count($analysis['matches']), 2);
+}
 
 $checkpointCounts = [];
 $checkpointCountsById = [];
@@ -120,6 +128,7 @@ json_response([
         'total_volume' => $analysis['total_volume'],
         'cut_through_count' => $analysis['cut_through_count'],
         'cut_through_percent' => $analysis['cut_through_percent'],
+        'avg_match_confidence' => $avgMatchConfidence,
         'meets_policy' => $analysis['cut_through_percent'] >= $policyThreshold,
         'local_arrivals_count' => count($analysis['unmatched_in']),
         'local_departures_count' => count($analysis['unmatched_out']),
