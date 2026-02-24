@@ -123,11 +123,16 @@ function pairCountsByRoute(matches, totalVolume = 0) {
   const grouped = groupMatchesByRoute(matches).map(([route, rows]) => {
     const count = rows.length;
     const percent = denom > 0 ? (count / denom) * 100 : 0;
+    const avgSpeed = count > 0
+      ? (rows.reduce((acc, m) => acc + Number(m?.avg_speed_mph || 0), 0) / count)
+      : 0;
     return {
       route,
       count,
       percent,
       percent_label: `${percent.toFixed(2)}%`,
+      avg_speed_mph: Number(avgSpeed.toFixed(2)),
+      avg_speed_label: `${avgSpeed.toFixed(2)} mph`,
     };
   });
   return grouped.sort((a, b) => (b.count - a.count) || a.route.localeCompare(b.route, undefined, { numeric: true, sensitivity: 'base' }));
@@ -146,14 +151,14 @@ function renderPairChart(matches, totalVolume = 0) {
   }
 
   const top = pairCounts[0];
-  metaEl.textContent = `Unique pairs: ${pairCounts.length} | Top pair: ${top.route} (${top.count}, ${top.percent_label} of total volume)`;
+  metaEl.textContent = `Unique pairs: ${pairCounts.length} | Top pair: ${top.route} (${top.count}, ${top.percent_label} of total volume, ${top.avg_speed_label})`;
   const maxCount = Math.max(...pairCounts.map((p) => p.count), 1);
   chartEl.innerHTML = pairCounts.map((pair) => {
     const widthPct = Math.max(8, Math.round((pair.count / maxCount) * 100));
     return `<div class="pair-bar-row">
       <div class="pair-bar-head">
         <span class="pair-route">${pair.route}</span>
-        <span class="pair-count">${pair.count} (${pair.percent_label})</span>
+        <span class="pair-count">${pair.count} (${pair.percent_label}, ${pair.avg_speed_label})</span>
       </div>
       <div class="pair-bar-track">
         <div class="pair-bar-fill" style="width:${widthPct}%"></div>
@@ -339,9 +344,9 @@ function checkpointCountRows(data) {
 
 function pairCountRows(matches, totalVolume = 0) {
   const rows = pairCountsByRoute(matches || [], totalVolume)
-    .map((row) => [row.route, String(row.count), row.percent_label])
+    .map((row) => [row.route, String(row.count), row.percent_label, row.avg_speed_label])
     .sort((a, b) => Number(b[1]) - Number(a[1]));
-  return rows.length ? rows : [['No matches', '0', '0.00%']];
+  return rows.length ? rows : [['No matches', '0', '0.00%', '0.00 mph']];
 }
 
 function matchRows(matches) {
@@ -395,9 +400,6 @@ function rawEventRows(morningData, afternoonData) {
 
 function summaryRowsForPeriod(data) {
   const summary = data?.summary || {};
-  const avgCutThroughSpeed = (data?.matches || []).length
-    ? ((data.matches || []).reduce((acc, m) => acc + Number(m.avg_speed_mph || 0), 0) / data.matches.length).toFixed(2)
-    : '0.00';
   const avgMatchConfidence = Number(summary.avg_match_confidence ?? (
     (data?.matches || []).length
       ? ((data.matches || []).reduce((acc, m) => acc + Number(m.confidence || 0), 0) / data.matches.length)
@@ -412,7 +414,6 @@ function summaryRowsForPeriod(data) {
     ['Policy Status', summary.meets_policy ? 'Meets 25% Policy' : 'Below 25% Policy'],
     ['Local Arrivals (In only)', String(summary.local_arrivals_count ?? 0)],
     ['Local Departures (Out only)', String(summary.local_departures_count ?? 0)],
-    ['Average Cut-Through Speed', `${avgCutThroughSpeed} mph`],
     ['Expected Speed Setting', `${data?.settings?.speed_mph ?? ''} mph`],
     ['Buffer Window', `${data?.settings?.buffer_minutes ?? ''} min`],
     ['Min Confidence', String(data?.settings?.min_confidence ?? '')],
@@ -544,7 +545,7 @@ async function downloadFormalReportPdf() {
 
       addAutoTable(pdf, {
         startY: y,
-        head: [['Checkpoint Pair', 'Matched Cut-Through Count', '% Of Total Volume']],
+        head: [['Checkpoint Pair', 'Matched Cut-Through Count', '% Of Total Volume', 'Avg Speed (Pair)']],
         body: pairCountRows(data.matches || [], Number(data?.summary?.total_volume || 0)),
       });
       y = pdf.lastAutoTable.finalY + 12;
@@ -632,9 +633,6 @@ async function loadDashboard() {
   const totalVolume = Number(summary.total_volume || 0);
   const startTime = formatKpiDateTime(summary.start_time);
   const endTime = formatKpiDateTime(summary.end_time);
-  const avgCutThroughSpeed = json.matches.length
-    ? (json.matches.reduce((acc, m) => acc + Number(m.avg_speed_mph || 0), 0) / json.matches.length).toFixed(2)
-    : '0.00';
   const avgMatchConfidence = Number(summary.avg_match_confidence ?? (
     json.matches.length
       ? (json.matches.reduce((acc, m) => acc + Number(m.confidence || 0), 0) / json.matches.length)
@@ -649,7 +647,7 @@ async function loadDashboard() {
     kpiCard('Total (Two-Way)', summary.total_volume),
     kpiCard('Cut-Through Vehicles', summary.cut_through_count),
     kpiCard('Top Leg % (Of Total)', topPair ? topPair.percent_label : '0.00%'),
-    kpiCard('Avg Cut-Through Speed', `${avgCutThroughSpeed} mph`),
+    kpiCard('Top Leg Avg Speed', topPair ? topPair.avg_speed_label : '0.00 mph'),
     kpiCard('Avg Match Confidence', `${avgMatchConfidence}%`),
     kpiCard('Policy Status', policyStatus, policyClass),
     kpiCard('Local Arrivals (In only)', summary.local_arrivals_count),
@@ -678,8 +676,11 @@ async function loadDashboard() {
   } else {
     for (const [route, matches] of routeGroups) {
       const legPercent = totalVolume > 0 ? ((matches.length / totalVolume) * 100).toFixed(2) : '0.00';
+      const legAvgSpeed = matches.length > 0
+        ? (matches.reduce((acc, m) => acc + Number(m?.avg_speed_mph || 0), 0) / matches.length).toFixed(2)
+        : '0.00';
       const section = document.createElement('tr');
-      section.innerHTML = `<td colspan="6" style="background:#eef2ff; font-weight:700;">${route} (${matches.length}, ${legPercent}% of total volume)</td>`;
+      section.innerHTML = `<td colspan="6" style="background:#eef2ff; font-weight:700;">${route} (${matches.length}, ${legPercent}% of total volume, avg ${legAvgSpeed} mph)</td>`;
       matchBody.appendChild(section);
 
       matches.forEach((m) => {

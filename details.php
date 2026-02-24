@@ -158,8 +158,11 @@ async function loadDetails() {
     const totalVolume = Number(data?.summary?.total_volume || 0);
     for (const [route, matches] of routeGroups) {
       const legPercent = totalVolume > 0 ? ((matches.length / totalVolume) * 100).toFixed(2) : '0.00';
+      const legAvgSpeed = matches.length > 0
+        ? (matches.reduce((acc, m) => acc + Number(m?.avg_speed_mph || 0), 0) / matches.length).toFixed(2)
+        : '0.00';
       const section = document.createElement('tr');
-      section.innerHTML = `<td colspan="12" style="background:#eef2ff; font-weight:700;">${route} (${matches.length}, ${legPercent}% of total volume)</td>`;
+      section.innerHTML = `<td colspan="12" style="background:#eef2ff; font-weight:700;">${route} (${matches.length}, ${legPercent}% of total volume, avg ${legAvgSpeed} mph)</td>`;
       matchBody.appendChild(section);
 
       for (const m of matches) {
