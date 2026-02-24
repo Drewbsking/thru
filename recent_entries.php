@@ -50,6 +50,7 @@ $selectedCheckpointLabel = $selectedCheckpoint
     ? ((string)$selectedCheckpoint['display_name'] . ' (' . (string)$selectedCheckpoint['checkpoint_code'] . ')')
     : '';
 $showSelectors = $isAdmin && !$isCheckpointLocked && (count($scopedSites) > 1 || count($checkpoints) > 1);
+$entryEditCsrfToken = csrf_token();
 
 render_head('Recent Entries');
 ?>
@@ -117,6 +118,7 @@ const initialSiteId = <?= (int)$siteId ?>;
 const initialCheckpointId = <?= (int)$checkpointId ?>;
 const initialSiteName = <?= json_encode((string)($site['name'] ?? ''), JSON_UNESCAPED_SLASHES) ?>;
 const initialCheckpointLabel = <?= json_encode($selectedCheckpointLabel, JSON_UNESCAPED_SLASHES) ?>;
+const entryEditCsrfToken = <?= json_encode($entryEditCsrfToken, JSON_UNESCAPED_SLASHES) ?>;
 
 let activeSiteId = Number(initialSiteId || 0);
 let activeCheckpointId = Number(initialCheckpointId || 0);
@@ -201,10 +203,15 @@ async function loadRecentEntries() {
     return;
   }
 
-  const res = await fetch(`api/recent_checkpoint_events.php?site_id=${siteId}&checkpoint_id=${checkpointId}&limit=${limit}`);
-  const data = await res.json();
-  if (!data.ok) {
-    recentEntryBody.innerHTML = `<tr><td colspan=\"8\">${escapeHtml(data.error || 'Unable to load recent entries.')}</td></tr>`;
+  let data = null;
+  try {
+    const res = await fetch(`api/recent_checkpoint_events.php?site_id=${siteId}&checkpoint_id=${checkpointId}&limit=${limit}`);
+    data = await res.json();
+  } catch (err) {
+    data = { ok: false, error: 'Unable to load recent entries.' };
+  }
+  if (!data?.ok) {
+    recentEntryBody.innerHTML = `<tr><td colspan=\"8\">${escapeHtml(data?.error || 'Unable to load recent entries.')}</td></tr>`;
     return;
   }
 
@@ -281,9 +288,16 @@ function exitRecentEditMode(tr) {
 
 if (siteInput && cpInput) {
   siteInput.addEventListener('change', async () => {
-    const res = await fetch('api/site_context.php');
-    const data = await res.json();
-    if (!data.ok) return;
+    let data = null;
+    try {
+      const res = await fetch('api/site_context.php');
+      data = await res.json();
+    } catch (err) {
+      statusEl.textContent = 'Unable to load site/checkpoint options.';
+      statusEl.className = 'status warn';
+      return;
+    }
+    if (!data?.ok) return;
     const selectedSite = Number(siteInput.value || 0);
     const site = (data.sites || []).find((s) => Number(s.id) === selectedSite);
     cpInput.innerHTML = '';
@@ -341,12 +355,18 @@ if (recentEntryBody) {
     if (target.dataset.del) {
       if (!confirm('Delete this entry?')) return;
       const fd = new FormData();
+      fd.append('csrf_token', entryEditCsrfToken);
       fd.append('action', 'delete');
       fd.append('event_id', String(eventId));
       fd.append('site_id', String(getSiteId()));
       fd.append('checkpoint_id', String(getCheckpointId()));
-      const res = await fetch('api/entry_event_action.php', { method: 'POST', body: fd });
-      const data = await res.json();
+      let data = null;
+      try {
+        const res = await fetch('api/entry_event_action.php', { method: 'POST', body: fd });
+        data = await res.json();
+      } catch (err) {
+        data = { ok: false, error: 'Delete failed due to a network/server error.' };
+      }
       statusEl.textContent = data.ok ? 'Entry deleted.' : (data.error || 'Delete failed.');
       statusEl.className = data.ok ? 'status ok' : 'status warn';
       await loadRecentEntries();
@@ -376,6 +396,7 @@ if (recentEntryBody) {
       const notes = (tr.querySelector('[data-input="notes"]')?.value || '').toUpperCase();
 
       const fd = new FormData();
+      fd.append('csrf_token', entryEditCsrfToken);
       fd.append('action', 'edit');
       fd.append('event_id', String(eventId));
       fd.append('site_id', String(getSiteId()));
@@ -385,8 +406,13 @@ if (recentEntryBody) {
       fd.append('vehicle_type', vehicleType);
       fd.append('vehicle_color', vehicleColor);
       fd.append('notes', notes);
-      const res = await fetch('api/entry_event_action.php', { method: 'POST', body: fd });
-      const data = await res.json();
+      let data = null;
+      try {
+        const res = await fetch('api/entry_event_action.php', { method: 'POST', body: fd });
+        data = await res.json();
+      } catch (err) {
+        data = { ok: false, error: 'Update failed due to a network/server error.' };
+      }
       if (!data.ok) {
         statusEl.textContent = data.error || 'Update failed.';
         statusEl.className = 'status warn';

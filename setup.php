@@ -172,6 +172,15 @@ async function post(action, extra = {}, file = null) {
   return res.json();
 }
 
+function escapeHtml(value) {
+  return String(value ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
 function selectedSiteId() {
   return Number(document.getElementById('sitePicker').value || 0);
 }
@@ -211,7 +220,7 @@ function renderCheckpoints() {
   cpBody.innerHTML = '';
   cps.forEach(cp => {
     const tr = document.createElement('tr');
-    tr.innerHTML = `<td>${cp.checkpoint_code}</td><td>${cp.display_name}</td><td>${cp.checkpoint_type}</td>
+    tr.innerHTML = `<td>${escapeHtml(cp.checkpoint_code)}</td><td>${escapeHtml(cp.display_name)}</td><td>${escapeHtml(cp.checkpoint_type)}</td>
       <td><button type="button" class="secondary" data-edit="${cp.id}">Edit</button> <button type="button" class="warn" data-del="${cp.id}">Delete</button></td>`;
     cpBody.appendChild(tr);
   });
@@ -286,10 +295,10 @@ function renderDistances() {
       const expected = Number.isFinite(miles) && miles > 0 ? ((miles / speed) * 60).toFixed(2) : '--';
 
       const tr = document.createElement('tr');
-      tr.innerHTML = `<td>${fromCp.display_name} (${fromCp.checkpoint_code})</td>
-        <td>${toCp.display_name} (${toCp.checkpoint_code})</td>
-        <td><input type="number" min="0.01" step="0.01" data-distance-input value="${milesText}"></td>
-        <td data-expected>${expected === '--' ? '--' : `${expected} min`}</td>
+      tr.innerHTML = `<td>${escapeHtml(fromCp.display_name)} (${escapeHtml(fromCp.checkpoint_code)})</td>
+        <td>${escapeHtml(toCp.display_name)} (${escapeHtml(toCp.checkpoint_code)})</td>
+        <td><input type="number" min="0.01" step="0.01" data-distance-input value="${escapeHtml(milesText)}"></td>
+        <td data-expected>${expected === '--' ? '--' : `${escapeHtml(expected)} min`}</td>
         <td><button type="button" data-save-distance data-from-id="${fromCp.id}" data-to-id="${toCp.id}">Save</button></td>`;
       tbody.appendChild(tr);
     }
@@ -352,7 +361,7 @@ function renderCollectorsAndAssignments() {
   collectorBody.innerHTML = '';
   collectors.forEach(u => {
     const tr = document.createElement('tr');
-    tr.innerHTML = `<td>${u.username}</td><td>${u.role}</td>`;
+    tr.innerHTML = `<td>${escapeHtml(u.username)}</td><td>${escapeHtml(u.role)}</td>`;
     collectorBody.appendChild(tr);
   });
 
@@ -383,7 +392,7 @@ function renderCollectorsAndAssignments() {
   assignmentBody.innerHTML = '';
   (context.assignments || []).forEach(a => {
     const tr = document.createElement('tr');
-    tr.innerHTML = `<td>${a.username}</td><td>${a.site_name}</td><td>${a.checkpoint_name} (${a.checkpoint_code})</td><td><button type="button" class="warn" data-del-assignment="${a.id}">Remove</button></td>`;
+    tr.innerHTML = `<td>${escapeHtml(a.username)}</td><td>${escapeHtml(a.site_name)}</td><td>${escapeHtml(a.checkpoint_name)} (${escapeHtml(a.checkpoint_code)})</td><td><button type="button" class="warn" data-del-assignment="${a.id}">Remove</button></td>`;
     assignmentBody.appendChild(tr);
   });
 }

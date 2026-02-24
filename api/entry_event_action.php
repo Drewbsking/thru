@@ -7,6 +7,7 @@ require_once __DIR__ . '/_bootstrap.php';
 if (($_SERVER['REQUEST_METHOD'] ?? '') !== 'POST') {
     json_response(['ok' => false, 'error' => 'Method not allowed'], 405);
 }
+require_csrf_api();
 
 $action = (string)($_POST['action'] ?? '');
 $eventId = (int)($_POST['event_id'] ?? 0);

@@ -51,6 +51,7 @@ $selectedCheckpointLabel = $selectedCheckpoint
     : '';
 $showSelectors = $isAdmin && !$isCheckpointLocked && (count($scopedSites) > 1 || count($checkpoints) > 1);
 $initialCollectorName = current_username();
+$entryCsrfToken = csrf_token();
 
 render_head('Data Entry');
 ?>
@@ -204,6 +205,7 @@ const initialSiteId = <?= (int)$siteId ?>;
 const initialCheckpointId = <?= (int)$checkpointId ?>;
 const initialSiteName = <?= json_encode((string)($site['name'] ?? ''), JSON_UNESCAPED_SLASHES) ?>;
 const initialCheckpointLabel = <?= json_encode($selectedCheckpointLabel, JSON_UNESCAPED_SLASHES) ?>;
+const entryCsrfToken = <?= json_encode($entryCsrfToken, JSON_UNESCAPED_SLASHES) ?>;
 const collectorName = currentUsername;
 let activeSiteId = Number(initialSiteId || 0);
 let activeCheckpointId = Number(initialCheckpointId || 0);
@@ -436,18 +438,22 @@ async function loadCheckpointSummary() {
   const checkpointId = getCheckpointId();
   if (!siteId || !checkpointId || !checkpointSummaryLabel) return;
   const period = getCurrentStudyPeriod();
-  const res = await fetch(`api/dashboard_data.php?site_id=${siteId}&study_period=${period}`);
-  const data = await res.json();
-  if (!data.ok) {
+  try {
+    const res = await fetch(`api/dashboard_data.php?site_id=${siteId}&study_period=${period}`);
+    const data = await res.json();
+    if (!data.ok) {
+      checkpointSummaryLabel.textContent = 'Checkpoint Summary: unavailable';
+      return;
+    }
+    const row = (data.checkpoint_counts_by_id || []).find(r => Number(r.checkpoint_id) === checkpointId);
+    if (!row) {
+      checkpointSummaryLabel.textContent = `Checkpoint Summary (${currentStudyPeriodLabel()}): Total 0 (In 0 / Out 0)`;
+      return;
+    }
+    checkpointSummaryLabel.textContent = `Checkpoint Summary (${currentStudyPeriodLabel()}): Total ${row.total} (In ${row.in} / Out ${row.out})`;
+  } catch (err) {
     checkpointSummaryLabel.textContent = 'Checkpoint Summary: unavailable';
-    return;
   }
-  const row = (data.checkpoint_counts_by_id || []).find(r => Number(r.checkpoint_id) === checkpointId);
-  if (!row) {
-    checkpointSummaryLabel.textContent = `Checkpoint Summary (${currentStudyPeriodLabel()}): Total 0 (In 0 / Out 0)`;
-    return;
-  }
-  checkpointSummaryLabel.textContent = `Checkpoint Summary (${currentStudyPeriodLabel()}): Total ${row.total} (In ${row.in} / Out ${row.out})`;
 }
 
 async function refreshEntryContext() {
@@ -459,9 +465,16 @@ async function refreshEntryContext() {
 
 if (siteInput && cpInput) {
   siteInput.addEventListener('change', async () => {
-    const res = await fetch('api/site_context.php');
-    const data = await res.json();
-    if (!data.ok) return;
+    let data = null;
+    try {
+      const res = await fetch('api/site_context.php');
+      data = await res.json();
+    } catch (err) {
+      statusEl.textContent = 'Unable to load site/checkpoint options.';
+      statusEl.className = 'status warn';
+      return;
+    }
+    if (!data?.ok) return;
     const selectedSite = Number(siteInput.value);
     const site = data.sites.find(s => Number(s.id) === selectedSite);
     cpInput.innerHTML = '';
@@ -523,6 +536,7 @@ if (form) {
 
     payload.append('site_id', String(siteId));
     payload.append('checkpoint_id', String(checkpointId));
+    payload.append('csrf_token', entryCsrfToken);
     payload.append('direction', direction);
     payload.append('plate', (document.getElementById('plate').value || '').toUpperCase());
     payload.append('vehicle_type', vehicleType);
@@ -532,19 +546,31 @@ if (form) {
 
     const signature = currentEntrySignature();
     if (pendingConfirmSignature !== signature) {
-      const dupRes = await fetch('api/check_duplicate.php', { method: 'POST', body: payload });
-      const dupJson = await dupRes.json();
-      if (dupJson.ok && dupJson.duplicate) {
-        pendingConfirmSignature = signature;
-        const dupTime = dupJson.latest?.event_time ? formatEtDateTime(dupJson.latest.event_time) : 'just now';
-        statusEl.textContent = `Possible duplicate near ${dupTime}. Press Save Event again to confirm.`;
-        statusEl.className = 'status warn';
-        return;
+      try {
+        const dupRes = await fetch('api/check_duplicate.php', { method: 'POST', body: payload });
+        const dupJson = await dupRes.json();
+        if (dupRes.ok && dupJson.ok && dupJson.duplicate) {
+          pendingConfirmSignature = signature;
+          const dupTime = dupJson.latest?.event_time ? formatEtDateTime(dupJson.latest.event_time) : 'just now';
+          statusEl.textContent = `Possible duplicate near ${dupTime}. Press Save Event again to confirm.`;
+          statusEl.className = 'status warn';
+          return;
+        }
+      } catch (err) {
+        // Duplicate check is advisory only; continue with save.
       }
     }
 
-    const res = await fetch('api/submit_event.php', { method: 'POST', body: payload });
-    const json = await res.json();
+    let res;
+    let json;
+    try {
+      res = await fetch('api/submit_event.php', { method: 'POST', body: payload });
+      json = await res.json();
+    } catch (err) {
+      statusEl.textContent = 'Network/server error. Event was not saved.';
+      statusEl.className = 'status warn';
+      return;
+    }
     if (!json.ok) {
       statusEl.textContent = json.error || 'Save failed.';
       statusEl.className = 'status warn';

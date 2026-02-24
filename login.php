@@ -24,7 +24,16 @@ if (is_authenticated()) {
 $accountError = '';
 $viewerError = '';
 $next = (string)($_GET['next'] ?? $_POST['next'] ?? 'index.php');
-if ($next === '' || str_starts_with($next, 'http://') || str_starts_with($next, 'https://')) {
+
+// Keep post-login redirects local to this app only.
+$next = trim($next);
+if (
+    $next === ''
+    || str_starts_with($next, '//')
+    || str_contains($next, '://')
+    || preg_match('/[\r\n]/', $next)
+    || !preg_match('/^[A-Za-z0-9._\\-\\/?=&%]+$/', $next)
+) {
     $next = 'index.php';
 }
 

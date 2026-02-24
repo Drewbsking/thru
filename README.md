@@ -61,7 +61,8 @@
 - `setup.php` and `api/save_setup.php` are admin-only.
 - Collector users can only submit/view/edit/delete events for assigned checkpoints.
 - Collectors can only edit/delete their own events; admins can edit/delete any event.
-- Admin setup API actions are CSRF-protected.
+- Write APIs are CSRF-protected (`setup`, `entry submit`, duplicate check, and entry edit/delete).
+- Site-level read access is enforced in APIs (collectors can only read assigned sites; dashboard viewer can only read the active site).
 - Optional dashboard viewer mode is available with a shared access code (no username); this mode is read-only and restricted to `dashboard.php` for the active site.
 
 ## Notes

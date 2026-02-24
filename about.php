@@ -23,6 +23,13 @@ render_head('About');
 </section>
 
 <section class="card" style="margin-top:1rem;">
+  <h2>PDF Report</h2>
+  <p class="small">The AM+PM PDF report is generated from dashboard data and includes match summaries and raw events.</p>
+  <p><a class="btn secondary" href="dashboard.php?download_report=1">Download PDF Report (AM+PM)</a></p>
+  <p class="small">This opens the Dashboard and starts the report download automatically.</p>
+</section>
+
+<section class="card" style="margin-top:1rem;">
   <h2>Current Matching Settings</h2>
   <table>
     <thead><tr><th>Setting</th><th>Value</th><th>How it is used</th></tr></thead>
@@ -107,8 +114,9 @@ render_head('About');
     <tbody>
       <tr><td>Total Volume (Two-Way)</td><td><code class="inline">matches + unmatched_in + unmatched_out</code></td></tr>
       <tr><td>Cut-Through Vehicles</td><td>Number of matched In/Out pairs.</td></tr>
-      <tr><td>Cut-Through %</td><td><code class="inline">(cut_through_count / total_volume) * 100</code></td></tr>
-      <tr><td>Policy Status</td><td>Meets policy when cut-through % is at least <?= h(number_format($policyThreshold, 0)) ?>%.</td></tr>
+      <tr><td>Leg % (each checkpoint pair)</td><td><code class="inline">(pair_match_count / total_volume) * 100</code></td></tr>
+      <tr><td>Top Leg % (dashboard KPI)</td><td>The highest leg % among all checkpoint pairs in the selected period.</td></tr>
+      <tr><td>Policy Status</td><td>Uses site-wide cut-through %: <code class="inline">(cut_through_count / total_volume) * 100</code>. Meets policy at <?= h(number_format($policyThreshold, 0)) ?>% or higher.</td></tr>
     </tbody>
   </table>
 </section>

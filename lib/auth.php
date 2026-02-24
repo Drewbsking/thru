@@ -7,6 +7,15 @@ require_once __DIR__ . '/utils.php';
 function auth_session_start(): void
 {
     if (session_status() === PHP_SESSION_NONE) {
+        $isHttps = (!empty($_SERVER['HTTPS']) && (string)$_SERVER['HTTPS'] !== 'off')
+            || (int)($_SERVER['SERVER_PORT'] ?? 0) === 443;
+        session_set_cookie_params([
+            'lifetime' => 0,
+            'path' => '/',
+            'secure' => $isHttps,
+            'httponly' => true,
+            'samesite' => 'Lax',
+        ]);
         session_start();
     }
 }
@@ -256,6 +265,35 @@ function can_access_checkpoint(int $siteId, int $checkpointId): bool
 
     $stmt = db_prepare('SELECT id FROM checkpoint_assignments WHERE user_id = ? AND site_id = ? AND checkpoint_id = ? AND is_active = 1 LIMIT 1');
     $stmt->bind_param('iii', $userId, $siteId, $checkpointId);
+    $stmt->execute();
+    $row = $stmt->get_result()?->fetch_assoc();
+    $stmt->close();
+    return (bool)$row;
+}
+
+function can_access_site(int $siteId): bool
+{
+    if ($siteId <= 0) {
+        return false;
+    }
+    if (is_admin()) {
+        return true;
+    }
+    if (is_dashboard_viewer()) {
+        return $siteId === current_site_id();
+    }
+
+    $userId = current_user_id();
+    if ($userId <= 0) {
+        return false;
+    }
+
+    $stmt = db_prepare('SELECT a.id
+        FROM checkpoint_assignments a
+        INNER JOIN checkpoints c ON c.id = a.checkpoint_id
+        WHERE a.user_id = ? AND a.site_id = ? AND a.is_active = 1 AND c.is_active = 1
+        LIMIT 1');
+    $stmt->bind_param('ii', $userId, $siteId);
     $stmt->execute();
     $row = $stmt->get_result()?->fetch_assoc();
     $stmt->close();

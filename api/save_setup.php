@@ -324,8 +324,17 @@ function upload_site_image(): void
     if (!isset($_FILES['site_image']) || ($_FILES['site_image']['error'] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_OK) {
         json_response(['ok' => false, 'error' => 'Image upload failed.'], 422);
     }
+    $fileSize = (int)($_FILES['site_image']['size'] ?? 0);
+    $maxBytes = 5 * 1024 * 1024;
+    if ($fileSize <= 0 || $fileSize > $maxBytes) {
+        json_response(['ok' => false, 'error' => 'Image must be between 1 byte and 5 MB.'], 422);
+    }
 
     $tmp = $_FILES['site_image']['tmp_name'];
+    $imageInfo = @getimagesize($tmp);
+    if ($imageInfo === false) {
+        json_response(['ok' => false, 'error' => 'Uploaded file is not a valid image.'], 422);
+    }
     $mime = mime_content_type($tmp) ?: '';
     $allowed = [
         'image/png' => 'png',

@@ -8,6 +8,9 @@ $siteId = (int)($_GET['site_id'] ?? current_site_id());
 if ($siteId <= 0) {
     json_response(['ok' => false, 'error' => 'No active site configured.'], 422);
 }
+if (!can_access_site($siteId)) {
+    json_response(['ok' => false, 'error' => 'Not authorized for this site.'], 403);
+}
 
 $studyPeriod = strtolower(trim((string)($_GET['study_period'] ?? 'morning')));
 if (!in_array($studyPeriod, ['morning', 'afternoon'], true)) {

@@ -11,6 +11,12 @@ if ($siteId <= 0) {
     echo 'No valid site selected.';
     exit;
 }
+if (!can_access_site($siteId)) {
+    http_response_code(403);
+    header('Content-Type: text/plain; charset=utf-8');
+    echo 'Not authorized for this site.';
+    exit;
+}
 
 $studyPeriod = strtolower(trim((string)($_GET['study_period'] ?? 'morning')));
 if (!in_array($studyPeriod, ['morning', 'afternoon'], true)) {
@@ -75,4 +81,3 @@ foreach ($rows as $row) {
 }
 fclose($out);
 exit;
-

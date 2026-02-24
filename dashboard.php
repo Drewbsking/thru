@@ -12,6 +12,7 @@ render_head('Dashboard');
   <p class="small">Auto-refreshes every <span id="pollLabel">10</span> seconds. Cut-through is calculated with expected travel time from checkpoint distance and speed setting.</p>
   <p class="small">All times shown in Eastern Time (ET).</p>
   <p class="small" id="studyDateLabel"></p>
+  <p class="status small" id="dashboardStatus"></p>
   <?php if (!$activeSite): ?>
     <p class="status warn">No active site is configured. Set one in Site Setup.</p>
   <?php else: ?>
@@ -87,6 +88,8 @@ const activeSiteId = <?= (int)$siteId ?>;
 const refreshBtn = document.getElementById('refreshBtn');
 const downloadReportBtn = document.getElementById('downloadReportBtn');
 const studyPeriodSelect = document.getElementById('study_period');
+const dashboardUrlParams = new URLSearchParams(window.location.search);
+let autoDownloadReport = dashboardUrlParams.get('download_report') === '1';
 let reportBusy = false;
 
 function currentStudyPeriod() {
@@ -100,6 +103,15 @@ function currentStudyPeriod() {
 
 function kpiCard(label, value, css='') {
   return `<article class="card"><div class="kpi ${css}">${value}</div><div class="kpi-label">${label}</div></article>`;
+}
+
+function escapeHtml(value) {
+  return String(value ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
 }
 
 function formatWholeSpeed(value) {
@@ -161,10 +173,12 @@ function renderPairChart(matches, totalVolume = 0) {
   const maxCount = Math.max(...pairCounts.map((p) => p.count), 1);
   chartEl.innerHTML = pairCounts.map((pair) => {
     const widthPct = Math.max(8, Math.round((pair.count / maxCount) * 100));
+    const routeLabel = escapeHtml(pair.route);
+    const countLabel = escapeHtml(`${pair.count} (${pair.percent_label}, ${pair.avg_speed_label})`);
     return `<div class="pair-bar-row">
       <div class="pair-bar-head">
-        <span class="pair-route">${pair.route}</span>
-        <span class="pair-count">${pair.count} (${pair.percent_label}, ${pair.avg_speed_label})</span>
+        <span class="pair-route">${routeLabel}</span>
+        <span class="pair-count">${countLabel}</span>
       </div>
       <div class="pair-bar-track">
         <div class="pair-bar-fill" style="width:${widthPct}%"></div>
@@ -628,10 +642,28 @@ async function downloadFormalReportPdf() {
 
 async function loadDashboard() {
   if (!activeSiteId || !studyPeriodSelect) return;
+  const dashboardStatusEl = document.getElementById('dashboardStatus');
   const studyPeriod = studyPeriodSelect.value;
-  const res = await fetch(`api/dashboard_data.php?site_id=${activeSiteId}&study_period=${studyPeriod}`);
-  const json = await res.json();
-  if (!json.ok) return;
+  let json = null;
+  try {
+    const res = await fetch(`api/dashboard_data.php?site_id=${activeSiteId}&study_period=${studyPeriod}`);
+    json = await res.json();
+  } catch (err) {
+    json = { ok: false, error: 'Unable to load dashboard data.' };
+  }
+  if (!json || !json.ok) {
+    if (dashboardStatusEl) {
+      dashboardStatusEl.textContent = json?.error || 'Unable to load dashboard data.';
+      dashboardStatusEl.className = 'status small warn';
+    }
+    if (timer) clearTimeout(timer);
+    timer = setTimeout(loadDashboard, pollMs);
+    return;
+  }
+  if (dashboardStatusEl) {
+    dashboardStatusEl.textContent = '';
+    dashboardStatusEl.className = 'status small';
+  }
 
   const studyDateLabel = document.getElementById('studyDateLabel');
   if (studyDateLabel) {
@@ -687,7 +719,7 @@ async function loadDashboard() {
   } else {
     cpEntries.forEach(([name, c]) => {
       const tr = document.createElement('tr');
-      tr.innerHTML = `<td>${name}</td><td>${c.in}</td><td>${c.out}</td><td>${c.total}</td>`;
+      tr.innerHTML = `<td>${escapeHtml(name)}</td><td>${escapeHtml(c.in)}</td><td>${escapeHtml(c.out)}</td><td>${escapeHtml(c.total)}</td>`;
       cpBody.appendChild(tr);
     });
   }
@@ -704,17 +736,17 @@ async function loadDashboard() {
         ? (matches.reduce((acc, m) => acc + Number(m?.avg_speed_mph || 0), 0) / matches.length).toFixed(2)
         : '0.00';
       const section = document.createElement('tr');
-      section.innerHTML = `<td colspan="6" style="background:#eef2ff; font-weight:700;">${route} (${matches.length}, ${legPercent}% of total volume, avg ${legAvgSpeed} mph)</td>`;
+      section.innerHTML = `<td colspan="6" style="background:#eef2ff; font-weight:700;">${escapeHtml(route)} (${escapeHtml(matches.length)}, ${escapeHtml(legPercent)}% of total volume, avg ${escapeHtml(legAvgSpeed)} mph)</td>`;
       matchBody.appendChild(section);
 
       matches.forEach((m) => {
         const tr = document.createElement('tr');
-        tr.innerHTML = `<td>${m.in_event.id}</td>
-          <td>${m.out_event.id}</td>
-          <td>${m.elapsed_minutes} min</td>
-          <td>${m.expected_minutes} min</td>
-          <td>${formatWholeSpeed(m.avg_speed_mph)} mph</td>
-          <td>${m.confidence}</td>`;
+        tr.innerHTML = `<td>${escapeHtml(m.in_event.id)}</td>
+          <td>${escapeHtml(m.out_event.id)}</td>
+          <td>${escapeHtml(m.elapsed_minutes)} min</td>
+          <td>${escapeHtml(m.expected_minutes)} min</td>
+          <td>${escapeHtml(formatWholeSpeed(m.avg_speed_mph))} mph</td>
+          <td>${escapeHtml(m.confidence)}</td>`;
         matchBody.appendChild(tr);
       });
     }
@@ -727,9 +759,19 @@ async function loadDashboard() {
   } else {
     json.recent_events.forEach(e => {
       const tr = document.createElement('tr');
-      tr.innerHTML = `<td>${e.id}</td><td>${formatEtDateTime(e.event_time)}</td><td>${e.checkpoint_name}</td><td>${e.direction}</td><td>${e.plate_raw || ''}</td><td>${e.vehicle_type}</td><td>${e.vehicle_color}</td><td>${e.observer_name || ''}</td>`;
+      tr.innerHTML = `<td>${escapeHtml(e.id)}</td><td>${escapeHtml(formatEtDateTime(e.event_time))}</td><td>${escapeHtml(e.checkpoint_name)}</td><td>${escapeHtml(e.direction)}</td><td>${escapeHtml(e.plate_raw || '')}</td><td>${escapeHtml(e.vehicle_type)}</td><td>${escapeHtml(e.vehicle_color)}</td><td>${escapeHtml(e.observer_name || '')}</td>`;
       recentBody.appendChild(tr);
     });
+  }
+
+  if (autoDownloadReport) {
+    autoDownloadReport = false;
+    const nextParams = new URLSearchParams(window.location.search);
+    nextParams.delete('download_report');
+    const nextQuery = nextParams.toString();
+    const nextUrl = `${window.location.pathname}${nextQuery ? `?${nextQuery}` : ''}`;
+    window.history.replaceState({}, '', nextUrl);
+    await downloadFormalReportPdf();
   }
 
   if (timer) clearTimeout(timer);
