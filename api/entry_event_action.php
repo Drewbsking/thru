@@ -72,6 +72,11 @@ if ($action === 'edit') {
     $vehicleColor = $colorMap[$colorKey];
 
     $plate = normalize_plate($plate);
+    $plate = substr($plate, 0, 3);
+    $plateLen = strlen($plate);
+    if ($plateLen !== 3) {
+        json_response(['ok' => false, 'error' => 'License plate (first 3 characters) is required.'], 422);
+    }
     $plateNorm = $plate;
 
     $stmt = db_prepare('UPDATE traffic_events SET direction = ?, plate_raw = ?, plate_norm = ?, vehicle_type = ?, vehicle_color = ?, notes = ? WHERE id = ? AND site_id = ? AND checkpoint_id = ?');

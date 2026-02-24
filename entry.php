@@ -85,7 +85,7 @@ render_head('Data Entry');
       <div class="form-row">
         <div>
           <label>License Plate Number (First 3 characters)</label>
-          <input id="plate" maxlength="32" placeholder="ABC" style="text-transform:uppercase;" autocapitalize="characters" spellcheck="false">
+          <input id="plate" maxlength="3" placeholder="ABC" style="text-transform:uppercase;" autocapitalize="characters" spellcheck="false">
         </div>
       </div>
 

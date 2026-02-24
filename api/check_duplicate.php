@@ -14,9 +14,13 @@ $direction = ($_POST['direction'] ?? '') === 'Out' ? 'Out' : 'In';
 $vehicleType = trim((string)($_POST['vehicle_type'] ?? ''));
 $vehicleColor = trim((string)($_POST['vehicle_color'] ?? ''));
 $plateNorm = normalize_plate((string)($_POST['plate'] ?? ''));
+$plateNorm = substr($plateNorm, 0, 3);
 
 if ($siteId <= 0 || $checkpointId <= 0 || $vehicleType === '' || $vehicleColor === '') {
     json_response(['ok' => false, 'error' => 'Missing fields.'], 422);
+}
+if (strlen($plateNorm) !== 3) {
+    json_response(['ok' => false, 'error' => 'License plate (first 3 characters) is required.'], 422);
 }
 if (!can_access_checkpoint($siteId, $checkpointId)) {
     json_response(['ok' => false, 'error' => 'Not authorized for this checkpoint.'], 403);

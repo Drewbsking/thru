@@ -50,6 +50,11 @@ if (!can_access_checkpoint($siteId, $checkpointId)) {
 $eventTime = date('Y-m-d H:i:s');
 
 $plateRaw = normalize_plate($plateRaw);
+$plateRaw = substr($plateRaw, 0, 3);
+$plateLen = strlen($plateRaw);
+if ($plateLen !== 3) {
+    json_response(['ok' => false, 'error' => 'License plate (first 3 characters) is required.'], 422);
+}
 $plateNorm = $plateRaw;
 
 $checkStmt = db_prepare('SELECT c.id FROM checkpoints c WHERE c.id = ? AND c.site_id = ? AND c.is_active = 1 LIMIT 1');

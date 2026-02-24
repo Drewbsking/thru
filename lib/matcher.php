@@ -44,6 +44,12 @@ function compute_match_score(array $inEvent, array $outEvent): int
     // Weighted confidence: plate has highest influence, type/color stabilize noisy captures.
     $score = (int)round(($plate * 0.65) + ($type * 0.2) + ($color * 0.15));
 
+    // If the normalized plate matches exactly, don't let type/color disagreement drop confidence too low.
+    // This prevents perfect plate matches from being excluded when min_confidence is ~70.
+    if ($plate === 100) {
+        $score = max($score, 80);
+    }
+
     if (($inEvent['plate_norm'] ?? '') === '' && ($outEvent['plate_norm'] ?? '')) {
         $score = max(0, $score - 20);
     }

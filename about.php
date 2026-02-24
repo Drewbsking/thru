@@ -54,7 +54,8 @@ render_head('About');
 <section class="card" style="margin-top:1rem;">
   <h2>Confidence Formula</h2>
   <p class="small"><code class="inline">score = plate*0.65 + type*0.20 + color*0.15</code></p>
-  <p class="small">If In plate is blank but Out plate exists, score gets a -20 penalty.</p>
+  <p class="small">Plate is required for new entries (first 3 characters). Blank plates are rejected.</p>
+  <p class="small">Exact plate matches have a minimum confidence of 80, even if type/color disagree.</p>
   <p class="small">Plates are normalized first (for example: <code class="inline">O -&gt; 0</code>, <code class="inline">I -&gt; 1</code>). Fuzzy aliases also treat lookalikes as similar (<code class="inline">L/1</code>, <code class="inline">S/5</code>, <code class="inline">Z/2</code>, <code class="inline">B/8</code>).</p>
 </section>
 
@@ -69,7 +70,7 @@ render_head('About');
       <tr><td>100</td><td>Yes</td><td>No</td><td>85</td></tr>
       <tr><td>100</td><td>No</td><td>Yes</td><td>80</td></tr>
       <tr><td>60</td><td>Yes</td><td>Yes</td><td>74</td></tr>
-      <tr><td>100</td><td>No</td><td>No</td><td>65</td></tr>
+      <tr><td>100</td><td>No</td><td>No</td><td>80</td></tr>
       <tr><td>40</td><td>Yes</td><td>Yes</td><td>61</td></tr>
       <tr><td>20</td><td>Yes</td><td>Yes</td><td>48</td></tr>
       <tr><td>0</td><td>Yes</td><td>Yes</td><td>35</td></tr>
@@ -78,7 +79,6 @@ render_head('About');
       <tr><td>0</td><td>No</td><td>No</td><td>0</td></tr>
     </tbody>
   </table>
-  <p class="small">Blank-plate penalty: if the In plate is blank but the Out plate is present, the score is reduced by 20 (minimum 0).</p>
 </section>
 
 <section class="card" style="margin-top:1rem;">

@@ -249,7 +249,7 @@ function enterRecentEditMode(tr) {
       <option value="In"${tr.dataset.direction === 'In' ? ' selected' : ''}>In</option>
       <option value="Out"${tr.dataset.direction === 'Out' ? ' selected' : ''}>Out</option>
     </select>`;
-  tr.querySelector('[data-field="plate_raw"]').innerHTML = `<input data-input="plate_raw" maxlength="32" value="${escapeHtml(tr.dataset.plateRaw || '')}" style="text-transform:uppercase;" autocapitalize="characters" spellcheck="false">`;
+  tr.querySelector('[data-field="plate_raw"]').innerHTML = `<input data-input="plate_raw" maxlength="3" value="${escapeHtml(tr.dataset.plateRaw || '')}" style="text-transform:uppercase;" autocapitalize="characters" spellcheck="false">`;
   tr.querySelector('[data-field="vehicle_type"]').innerHTML = `<select data-input="vehicle_type">${tr.dataset.typeOptions || ''}</select>`;
   tr.querySelector('[data-field="vehicle_color"]').innerHTML = `<select data-input="vehicle_color">${tr.dataset.colorOptions || ''}</select>`;
   tr.querySelector('[data-field="notes"]').innerHTML = `<input data-input="notes" maxlength="255" value="${escapeHtml(tr.dataset.notes || '')}" style="text-transform:uppercase;" autocapitalize="characters">`;
