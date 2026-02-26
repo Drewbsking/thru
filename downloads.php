@@ -338,6 +338,13 @@ function rawEventRows(morningData, afternoonData) {
 
 function summaryRowsForPeriod(data) {
   const summary = data?.summary || {};
+  const checkpointTotals = (data?.checkpoint_counts_by_id || []).map((row) => Number(row.total || 0));
+  if (checkpointTotals.length === 0) {
+    for (const [, countRow] of Object.entries(data?.checkpoint_counts || {})) {
+      checkpointTotals.push(Number(countRow?.total || 0));
+    }
+  }
+  const highestCheckpointTwoWay = checkpointTotals.length > 0 ? Math.max(...checkpointTotals) : 0;
   const avgMatchConfidence = Number(summary.avg_match_confidence ?? (
     (data?.matches || []).length
       ? ((data.matches || []).reduce((acc, m) => acc + Number(m.confidence || 0), 0) / data.matches.length)
@@ -347,7 +354,7 @@ function summaryRowsForPeriod(data) {
   return [
     ['Start Time (First Entry)', formatEtDateTime(summary.start_time, true)],
     ['End Time (Last Entry)', formatEtDateTime(summary.end_time, true)],
-    ['Total Volume (Two-Way)', String(summary.total_volume ?? 0)],
+    ['Highest Checkpoint Two-Way', String(highestCheckpointTwoWay)],
     ['Vehicles Per Hour', `${vehiclesPerHour} veh/hr`],
     ['Cut-Through Vehicles', String(summary.cut_through_count ?? 0)],
     ['Avg Match Confidence', `${avgMatchConfidence}%`],

@@ -683,6 +683,13 @@ async function loadDashboard() {
   const policyClass = summary.meets_policy ? 'ok' : 'warn';
   const totalVolume = Number(summary.total_volume || 0);
   const vehiclesPerHour = Number(summary.vehicles_per_hour || 0).toFixed(2);
+  const checkpointTotals = (json.checkpoint_counts_by_id || []).map((row) => Number(row.total || 0));
+  if (checkpointTotals.length === 0) {
+    for (const [, countRow] of Object.entries(json.checkpoint_counts || {})) {
+      checkpointTotals.push(Number(countRow?.total || 0));
+    }
+  }
+  const highestCheckpointTwoWay = checkpointTotals.length > 0 ? Math.max(...checkpointTotals) : 0;
   const studyDate = formatEtDateOnly(json.study_date);
   const startTime = formatKpiTime(summary.start_time);
   const endTime = formatKpiTime(summary.end_time);
@@ -698,7 +705,7 @@ async function loadDashboard() {
     kpiCard('Study Date', studyDate),
     kpiCard('Start Time (First Entry)', startTime),
     kpiCard('End Time (Last Entry)', endTime),
-    kpiCard('Total (Two-Way)', summary.total_volume),
+    kpiCard('Highest Checkpoint Two-Way', highestCheckpointTwoWay),
     kpiCard('Vehicles Per Hour', `${vehiclesPerHour} veh/hr`),
     kpiCard('Cut-Through Vehicles', summary.cut_through_count),
     kpiCard('Top Leg % (Of Total)', topPair ? topPair.percent_label : '0.00%'),

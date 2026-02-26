@@ -47,11 +47,11 @@ $setupCsrfToken = csrf_token();
 <section class="card" style="margin-top:1rem;">
   <h2>Checkpoint Access Assignments</h2>
   <p class="small">Collectors are managed on the <a href="admin.php">Admin page</a>.</p>
+  <p class="small" id="assignmentSiteHint">Assignments use the site selected above.</p>
   <form id="assignmentForm">
     <div class="form-row">
       <div><label>Collector</label><select id="assign_user_id"></select></div>
-      <div><label>Site</label><select id="assign_site_id"></select></div>
-      <div><label>Checkpoint</label><select id="assign_checkpoint_id"></select></div>
+      <div><label>Checkpoint (Selected Site)</label><select id="assign_checkpoint_id"></select></div>
     </div>
     <button type="submit">Save Assignment</button>
   </form>
@@ -322,17 +322,12 @@ function renderCollectorsAndAssignments() {
     });
   }
 
-  const assignSite = document.getElementById('assign_site_id');
-  const currentSiteValue = assignSite.value;
-  assignSite.innerHTML = '';
-  (context.sites || []).forEach(s => {
-    const opt = document.createElement('option');
-    opt.value = s.id;
-    opt.textContent = s.name;
-    assignSite.appendChild(opt);
-  });
-  if (currentSiteValue) {
-    assignSite.value = currentSiteValue;
+  const selectedSite = (context.sites || []).find((s) => Number(s.id) === Number(selectedSiteId()));
+  const siteHint = document.getElementById('assignmentSiteHint');
+  if (siteHint) {
+    siteHint.textContent = selectedSite
+      ? `Assignments use site: ${selectedSite.name}.`
+      : 'Assignments use the site selected above.';
   }
   renderAssignmentCheckpointOptions();
 
@@ -349,7 +344,7 @@ function renderCollectorsAndAssignments() {
 }
 
 function renderAssignmentCheckpointOptions() {
-  const siteId = Number(document.getElementById('assign_site_id').value || 0);
+  const siteId = Number(selectedSiteId() || 0);
   const site = (context.sites || []).find(s => Number(s.id) === siteId);
   const assignCheckpoint = document.getElementById('assign_checkpoint_id');
   assignCheckpoint.innerHTML = '';
@@ -395,6 +390,7 @@ document.getElementById('sitePicker').addEventListener('change', () => {
   renderCheckpoints();
   renderSiteImage();
   renderDistances();
+  renderCollectorsAndAssignments();
 });
 
 document.getElementById('settingsForm').addEventListener('submit', async (e) => {
@@ -412,15 +408,13 @@ document.getElementById('settingsForm').addEventListener('submit', async (e) => 
   await loadContext();
 });
 
-document.getElementById('assign_site_id').addEventListener('change', renderAssignmentCheckpointOptions);
-
 document.getElementById('assignmentForm').addEventListener('submit', async (e) => {
   e.preventDefault();
   const userId = String(document.getElementById('assign_user_id').value || '').trim();
-  const siteId = String(document.getElementById('assign_site_id').value || '').trim();
+  const siteId = String(selectedSiteId() || '').trim();
   const checkpointId = String(document.getElementById('assign_checkpoint_id').value || '').trim();
   if (!userId || !siteId || !checkpointId) {
-    document.getElementById('assignmentStatus').textContent = 'Select a collector, site, and checkpoint first.';
+    document.getElementById('assignmentStatus').textContent = 'Select a collector and checkpoint first.';
     document.getElementById('assignmentStatus').className = 'status warn';
     return;
   }
