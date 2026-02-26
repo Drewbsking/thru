@@ -495,7 +495,7 @@ async function downloadFormalReportPdf() {
     pdf.setTextColor(20, 33, 61);
     pdf.setFont('helvetica', 'bold');
     pdf.setFontSize(22);
-    pdf.text('N-CAT Formal Study Report', marginX, y);
+    pdf.text('Cut-Through Study Report', marginX, y);
     y += 28;
     pdf.setFont('helvetica', 'normal');
     pdf.setFontSize(12);

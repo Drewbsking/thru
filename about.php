@@ -23,9 +23,9 @@ render_head('About');
 </section>
 
 <section class="card" style="margin-top:1rem;">
-  <h2>PDF Report</h2>
-  <p class="small">The AM+PM PDF report and CSV exports are available on the Downloads page.</p>
-  <p><a class="btn secondary" href="downloads.php">Open Downloads</a></p>
+  <h2>Policy Reference</h2>
+  <p class="small">RCOC Board Regulation No. 47, Installation of Speed Humps.</p>
+  <p><a class="btn secondary" href="RCOC%20Board%20Regulation%20No.%2047%2C%20Installation%20of%20Speed%20Humps.pdf" target="_blank" rel="noopener">Open Regulation PDF</a></p>
 </section>
 
 <section class="card" style="margin-top:1rem;">
