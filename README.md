@@ -18,7 +18,9 @@
 - Unmatched `In` = local arrival (destination), not cut-through.
 - Unmatched `Out` = local departure (origin), not cut-through.
 - `Total Volume` is deduped: matched pairs count once; unmatched events count once.
-- Policy status is based on `cut_through_percent >= 25` (configurable in setup).
+- Dashboard includes `Cut-Through / Highest Two-Way`: `cut_through_count / highest_checkpoint_two_way`.
+- Policy status is based on the highest per-leg endpoint ratio (configurable threshold in setup):
+  `leg_percent = leg_cut_through_count / max(two_way_at_leg_start, two_way_at_leg_end)`.
 - Dashboard and details filter by study period: `Morning Study` or `Afternoon Study` for the selected day.
 - Data collectors are assigned per checkpoint in Site Setup and auto-attached to event records in Data Entry.
 - Checkpoint codes are auto-numbered per site (`1`, `2`, `3`, ...); admins only set display names.

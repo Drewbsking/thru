@@ -289,6 +289,13 @@ function formatEtDateOnly(ymd) {
   return `${monthName} ${day}, ${year}`;
 }
 
+function formatPolicyThreshold(value) {
+  const n = Number(value);
+  if (!Number.isFinite(n)) return '25';
+  if (n % 1 === 0) return n.toFixed(0);
+  return n.toFixed(2).replace(/\.?0+$/, '');
+}
+
 function safeFileName(value) {
   return String(value || 'site')
     .trim()
@@ -501,6 +508,26 @@ function rawEventRows(morningData, afternoonData) {
 
 function summaryRowsForPeriod(data) {
   const summary = data?.summary || {};
+  const policyThresholdLabel = formatPolicyThreshold(data?.settings?.policy_cut_through_percent ?? 25);
+  const cutThroughCount = Number(summary.cut_through_count ?? 0);
+  const checkpointTotals = (data?.checkpoint_counts_by_id || []).map((row) => Number(row.total || 0));
+  if (checkpointTotals.length === 0) {
+    for (const [, countRow] of Object.entries(data?.checkpoint_counts || {})) {
+      checkpointTotals.push(Number(countRow?.total || 0));
+    }
+  }
+  const highestCheckpointTwoWayFromCounts = checkpointTotals.length > 0 ? Math.max(...checkpointTotals) : 0;
+  const highestCheckpointTwoWay = Number(summary.highest_checkpoint_two_way ?? highestCheckpointTwoWayFromCounts);
+  const cutThroughOverHighestPercent = Number(summary.cut_through_over_highest_two_way_percent ?? (
+    highestCheckpointTwoWay > 0 ? ((cutThroughCount / highestCheckpointTwoWay) * 100) : 0
+  ));
+  const maxLegPolicyPercent = Number(summary.max_leg_policy_percent ?? 0);
+  const maxLegPolicyCount = Number(summary.max_leg_policy_count ?? 0);
+  const maxLegPolicyDenominator = Number(summary.max_leg_policy_denominator ?? 0);
+  const maxLegPolicyRoute = String(summary.max_leg_policy_route || '--');
+  const policyStatus = summary.meets_policy
+    ? `Meets ${policyThresholdLabel}% Policy`
+    : `Below ${policyThresholdLabel}% Policy`;
   const avgMatchConfidence = Number(summary.avg_match_confidence ?? (
     (data?.matches || []).length
       ? ((data.matches || []).reduce((acc, m) => acc + Number(m.confidence || 0), 0) / data.matches.length)
@@ -511,10 +538,13 @@ function summaryRowsForPeriod(data) {
     ['Start Time (First Entry)', formatEtDateTime(summary.start_time, true)],
     ['End Time (Last Entry)', formatEtDateTime(summary.end_time, true)],
     ['Total Volume (Two-Way)', String(summary.total_volume ?? 0)],
+    ['Highest Checkpoint Two-Way', String(highestCheckpointTwoWay)],
+    ['Cut-Through Vehicles', String(cutThroughCount)],
+    ['Cut-Through / Highest Two-Way', `${cutThroughCount}/${highestCheckpointTwoWay} (${cutThroughOverHighestPercent.toFixed(2)}%)`],
     ['Vehicles Per Hour', `${vehiclesPerHour} veh/hr`],
-    ['Cut-Through Vehicles', String(summary.cut_through_count ?? 0)],
     ['Avg Match Confidence', `${avgMatchConfidence}%`],
-    ['Policy Status', summary.meets_policy ? 'Meets 25% Policy' : 'Below 25% Policy'],
+    ['Max Leg Policy %', `${maxLegPolicyPercent.toFixed(2)}% (${maxLegPolicyCount}/${maxLegPolicyDenominator}, ${maxLegPolicyRoute})`],
+    ['Policy Status', `${policyStatus} (max leg ${maxLegPolicyPercent.toFixed(2)}%)`],
     ['Local Arrivals (In only)', String(summary.local_arrivals_count ?? 0)],
     ['Local Departures (Out only)', String(summary.local_departures_count ?? 0)],
     ['Expected Speed Setting', `${data?.settings?.speed_mph ?? ''} mph`],
@@ -761,9 +791,13 @@ async function loadDashboard() {
   document.getElementById('pollLabel').textContent = String(pollMs / 1000);
 
   const summary = json.summary;
-  const policyStatus = summary.meets_policy ? 'Meets 25% Policy' : 'Below 25% Policy';
-  const policyClass = summary.meets_policy ? 'ok' : 'warn';
   const totalVolume = Number(summary.total_volume || 0);
+  const policyThresholdLabel = formatPolicyThreshold(json.settings?.policy_cut_through_percent ?? 25);
+  const maxLegPolicyPercent = Number(summary.max_leg_policy_percent ?? 0);
+  const policyStatus = summary.meets_policy
+    ? `Meets ${policyThresholdLabel}% Policy (max leg ${maxLegPolicyPercent.toFixed(2)}%)`
+    : `Below ${policyThresholdLabel}% Policy (max leg ${maxLegPolicyPercent.toFixed(2)}%)`;
+  const policyClass = summary.meets_policy ? 'ok' : 'warn';
   const vehiclesPerHour = Number(summary.vehicles_per_hour || 0).toFixed(2);
   const checkpointTotals = (json.checkpoint_counts_by_id || []).map((row) => Number(row.total || 0));
   if (checkpointTotals.length === 0) {
@@ -771,7 +805,11 @@ async function loadDashboard() {
       checkpointTotals.push(Number(countRow?.total || 0));
     }
   }
-  const highestCheckpointTwoWay = checkpointTotals.length > 0 ? Math.max(...checkpointTotals) : 0;
+  const highestCheckpointTwoWay = Number(summary.highest_checkpoint_two_way ?? (checkpointTotals.length > 0 ? Math.max(...checkpointTotals) : 0));
+  const cutThroughCount = Number(summary.cut_through_count || 0);
+  const cutThroughOverHighestPercent = Number(summary.cut_through_over_highest_two_way_percent ?? (
+    highestCheckpointTwoWay > 0 ? ((cutThroughCount / highestCheckpointTwoWay) * 100) : 0
+  ));
   const studyDate = formatEtDateOnly(json.study_date);
   const startTime = formatKpiTime(summary.start_time);
   const endTime = formatKpiTime(summary.end_time);
@@ -794,7 +832,8 @@ async function loadDashboard() {
   ];
   const countCards = [
     kpiCard('Highest Checkpoint Two-Way', highestCheckpointTwoWay),
-    kpiCard('Cut-Through Vehicles', summary.cut_through_count),
+    kpiCard('Cut-Through Vehicles', cutThroughCount),
+    kpiCard('Cut-Through / Highest Two-Way', `${cutThroughCount}/${highestCheckpointTwoWay} (${cutThroughOverHighestPercent.toFixed(2)}%)`),
     kpiCard('Local Arrivals (In only)', summary.local_arrivals_count),
     kpiCard('Local Departures (Out only)', summary.local_departures_count),
   ];

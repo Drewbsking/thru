@@ -115,7 +115,8 @@ render_head('About');
       <tr><td>Cut-Through Vehicles</td><td>Number of matched In/Out pairs.</td></tr>
       <tr><td>Leg % (each checkpoint pair)</td><td><code class="inline">(pair_match_count / total_volume) * 100</code></td></tr>
       <tr><td>Top Leg % (dashboard KPI)</td><td>The highest leg % among all checkpoint pairs in the selected period.</td></tr>
-      <tr><td>Policy Status</td><td>Uses site-wide cut-through %: <code class="inline">(cut_through_count / total_volume) * 100</code>. Meets policy at <?= h(number_format($policyThreshold, 0)) ?>% or higher.</td></tr>
+      <tr><td>Cut-Through / Highest Two-Way</td><td><code class="inline">(cut_through_count / highest_checkpoint_two_way) * 100</code>. Dashboard shows both raw ratio and percent.</td></tr>
+      <tr><td>Policy Status</td><td>Uses per-leg endpoint ratio. For each leg A→B: <code class="inline">leg_percent = leg_cut_through_count / max(two_way_at_A, two_way_at_B) * 100</code>. Policy checks the highest leg % against <?= h(number_format($policyThreshold, 0)) ?>%.</td></tr>
     </tbody>
   </table>
 </section>

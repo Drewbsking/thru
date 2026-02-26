@@ -165,6 +165,69 @@ foreach ($events as $event) {
     $checkpointCountsById[$cpId]['total']++;
 }
 
+$checkpointTotalsById = [];
+$highestCheckpointTwoWay = 0;
+foreach ($checkpointCountsById as $cpId => $row) {
+    $total = (int)($row['total'] ?? 0);
+    $checkpointTotalsById[(int)$cpId] = $total;
+    if ($total > $highestCheckpointTwoWay) {
+        $highestCheckpointTwoWay = $total;
+    }
+}
+
+$cutThroughOverHighestTwoWayPercent = $highestCheckpointTwoWay > 0
+    ? round((((int)$analysis['cut_through_count']) / $highestCheckpointTwoWay) * 100, 2)
+    : 0.0;
+
+$legGroups = [];
+foreach ($analysis['matches'] as $match) {
+    $inEvent = is_array($match['in_event'] ?? null) ? $match['in_event'] : [];
+    $outEvent = is_array($match['out_event'] ?? null) ? $match['out_event'] : [];
+    $inCheckpointId = (int)($inEvent['checkpoint_id'] ?? 0);
+    $outCheckpointId = (int)($outEvent['checkpoint_id'] ?? 0);
+    $inLabel = trim((string)($inEvent['checkpoint_name'] ?? $inEvent['checkpoint_code'] ?? 'In'));
+    $outLabel = trim((string)($outEvent['checkpoint_name'] ?? $outEvent['checkpoint_code'] ?? 'Out'));
+    if ($inLabel === '') {
+        $inLabel = 'In';
+    }
+    if ($outLabel === '') {
+        $outLabel = 'Out';
+    }
+    $routeLabel = $inLabel . ' to ' . $outLabel;
+    $groupKey = $inCheckpointId . ':' . $outCheckpointId . ':' . $routeLabel;
+    if (!isset($legGroups[$groupKey])) {
+        $legGroups[$groupKey] = [
+            'route' => $routeLabel,
+            'in_checkpoint_id' => $inCheckpointId,
+            'out_checkpoint_id' => $outCheckpointId,
+            'count' => 0,
+        ];
+    }
+    $legGroups[$groupKey]['count']++;
+}
+
+$maxLegPolicyPercent = 0.0;
+$maxLegPolicyRoute = '';
+$maxLegPolicyCount = 0;
+$maxLegPolicyDenominator = 0;
+foreach ($legGroups as $leg) {
+    $legCount = (int)$leg['count'];
+    $inTotal = (int)($checkpointTotalsById[(int)$leg['in_checkpoint_id']] ?? 0);
+    $outTotal = (int)($checkpointTotalsById[(int)$leg['out_checkpoint_id']] ?? 0);
+    $legDenominator = max($inTotal, $outTotal);
+    $legPercent = $legDenominator > 0 ? round(($legCount / $legDenominator) * 100, 2) : 0.0;
+    $isHigherPercent = $legPercent > $maxLegPolicyPercent;
+    $isEqualPercent = $legPercent === $maxLegPolicyPercent;
+    $isHigherCount = $legCount > $maxLegPolicyCount;
+    $isLexicographicallyFirstRoute = strcmp((string)$leg['route'], $maxLegPolicyRoute) < 0;
+    if ($isHigherPercent || ($isEqualPercent && ($isHigherCount || ($legCount === $maxLegPolicyCount && $isLexicographicallyFirstRoute)))) {
+        $maxLegPolicyPercent = $legPercent;
+        $maxLegPolicyRoute = (string)$leg['route'];
+        $maxLegPolicyCount = $legCount;
+        $maxLegPolicyDenominator = $legDenominator;
+    }
+}
+
 $recent = array_reverse(array_slice($events, -50));
 $firstEventTime = count($events) > 0 ? (string)$events[0]['event_time'] : null;
 $lastEventTime = count($events) > 0 ? (string)$events[count($events) - 1]['event_time'] : null;
@@ -204,8 +267,15 @@ json_response([
         'study_duration_minutes' => $studyDurationMinutes,
         'cut_through_count' => $analysis['cut_through_count'],
         'cut_through_percent' => $analysis['cut_through_percent'],
+        'highest_checkpoint_two_way' => $highestCheckpointTwoWay,
+        'cut_through_over_highest_two_way_percent' => $cutThroughOverHighestTwoWayPercent,
+        'max_leg_policy_percent' => $maxLegPolicyPercent,
+        'max_leg_policy_route' => $maxLegPolicyRoute,
+        'max_leg_policy_count' => $maxLegPolicyCount,
+        'max_leg_policy_denominator' => $maxLegPolicyDenominator,
+        'policy_basis' => 'max_leg_endpoint_ratio',
         'avg_match_confidence' => $avgMatchConfidence,
-        'meets_policy' => $analysis['cut_through_percent'] >= $policyThreshold,
+        'meets_policy' => $maxLegPolicyPercent >= $policyThreshold,
         'local_arrivals_count' => count($analysis['unmatched_in']),
         'local_departures_count' => count($analysis['unmatched_out']),
     ],
