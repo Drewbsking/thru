@@ -24,9 +24,8 @@ render_head('About');
 
 <section class="card" style="margin-top:1rem;">
   <h2>PDF Report</h2>
-  <p class="small">The AM+PM PDF report is generated from dashboard data and includes match summaries and raw events.</p>
-  <p><a class="btn secondary" href="dashboard.php?download_report=1">Download PDF Report (AM+PM)</a></p>
-  <p class="small">This opens the Dashboard and starts the report download automatically.</p>
+  <p class="small">The AM+PM PDF report and CSV exports are available on the Downloads page.</p>
+  <p><a class="btn secondary" href="downloads.php">Open Downloads</a></p>
 </section>
 
 <section class="card" style="margin-top:1rem;">

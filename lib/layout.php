@@ -37,6 +37,7 @@ function render_head(string $title): void
             echo '<a href="index.php">Home</a>';
             echo '<a href="dashboard.php">Dashboard</a>';
             echo '<a href="details.php">Cut-Through Details</a>';
+            echo '<a href="downloads.php">Downloads</a>';
             if (is_admin()) {
                 echo '<a href="setup.php">Site Setup</a>';
             }

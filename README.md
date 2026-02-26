@@ -5,8 +5,9 @@
 - `logout.php`: Ends the session.
 - `index.php`: Home page with site + checkpoint launch links.
 - `entry.php`: Checkpoint-locked vehicle entry form.
-- `dashboard.php`: Live dashboard (10s polling by default) with formal AM+PM PDF report download.
-- `details.php`: Matched cut-through details and CSV export.
+- `dashboard.php`: Live dashboard (10s polling by default).
+- `details.php`: Matched cut-through details with local arrivals/departures breakdown.
+- `downloads.php`: Centralized download page for AM+PM PDF report + CSV exports.
 - `setup.php`: Admin-only page for site setup, collector accounts, checkpoint assignments, and matching settings.
 
 ## Core Rules
@@ -30,6 +31,7 @@
 - `api/save_setup.php`
 - `api/list_distances.php`
 - `api/export_events_csv.php` (exports all events for selected site + study period/date)
+- `api/export_matches_csv.php` (exports matched cut-through rows for selected site + study period/date)
 
 ## Database
 - Auto-bootstrap runs when pages/APIs load.

@@ -29,10 +29,6 @@ render_head('Dashboard');
       <label>&nbsp;</label>
       <button id="refreshBtn" type="button">Refresh Now</button>
     </div>
-    <div>
-      <label>&nbsp;</label>
-      <button id="downloadReportBtn" type="button" class="secondary">Download PDF Report (AM+PM)</button>
-    </div>
   </div>
   <div class="card" style="margin-top:0.75rem; padding:0.75rem;">
     <h2 style="margin-bottom:0.4rem;">Selected Site</h2>
@@ -86,10 +82,9 @@ let pollMs = 10000;
 let timer;
 const activeSiteId = <?= (int)$siteId ?>;
 const refreshBtn = document.getElementById('refreshBtn');
-const downloadReportBtn = document.getElementById('downloadReportBtn');
+const downloadReportBtn = null;
 const studyPeriodSelect = document.getElementById('study_period');
-const dashboardUrlParams = new URLSearchParams(window.location.search);
-let autoDownloadReport = dashboardUrlParams.get('download_report') === '1';
+let autoDownloadReport = false;
 let reportBusy = false;
 
 function currentStudyPeriod() {
@@ -783,7 +778,6 @@ async function loadDashboard() {
 }
 
 if (refreshBtn) refreshBtn.addEventListener('click', loadDashboard);
-if (downloadReportBtn) downloadReportBtn.addEventListener('click', downloadFormalReportPdf);
 if (studyPeriodSelect) {
   studyPeriodSelect.addEventListener('change', loadDashboard);
   studyPeriodSelect.value = currentStudyPeriod();

@@ -40,11 +40,6 @@ render_head('Cut-Through Details');
         <option value="afternoon">Afternoon Study</option>
       </select>
     </div>
-    <div>
-      <label>&nbsp;</label>
-      <button type="button" id="exportBtn" class="secondary">Export Matches CSV</button>
-      <button type="button" id="exportAllBtn" class="secondary">Export All Events CSV</button>
-    </div>
   </div>
 </section>
 
@@ -73,6 +68,28 @@ render_head('Cut-Through Details');
   </article>
 </section>
 
+<section class="card" style="margin-top:1rem;">
+  <h2>Data Collection Details</h2>
+  <p class="small">Complete list of raw recordings for the selected site and study period.</p>
+  <details class="section-collapse">
+    <summary id="allEventsSummary">All Recordings (Chronological)</summary>
+    <div class="section-collapse-body">
+      <table>
+        <thead>
+          <tr><th>Event #</th><th>Time</th><th>Checkpoint</th><th>Dir</th><th>Plate</th><th>Vehicle</th><th>Observer</th><th>Comments</th></tr>
+        </thead>
+        <tbody id="allEventsBody"></tbody>
+      </table>
+    </div>
+  </details>
+  <details class="section-collapse" style="margin-top:0.75rem;">
+    <summary id="byLocationSummary">Recordings by Location</summary>
+    <div class="section-collapse-body">
+      <div id="eventsByLocation"></div>
+    </div>
+  </details>
+</section>
+
 <script>
 let matchesCache = [];
 const siteSelect = document.getElementById('site_id');
@@ -85,11 +102,6 @@ function currentStudyPeriod() {
     timeZone: 'America/New_York'
   }).format(new Date()));
   return hourEt < 12 ? 'morning' : 'afternoon';
-}
-
-function csvEscape(v) {
-  const s = String(v ?? '');
-  return `"${s.replaceAll('"', '""')}"`;
 }
 
 function escapeHtml(value) {
@@ -139,50 +151,93 @@ function formatEtDateTime(value) {
   return `${monthName} ${day}, ${year}, ${hour12}:${minute} ${ampm} ET`;
 }
 
-function exportCsv() {
-  const rows = [['in_event_id','out_event_id','in_time','in_checkpoint','out_time','out_checkpoint','distance_miles','elapsed_minutes','expected_minutes','avg_speed_mph','confidence','plate_score','type_score','color_score','plate_in','plate_out','vehicle_type_in','vehicle_color_in','vehicle_type_out','vehicle_color_out']];
-  for (const m of matchesCache) {
-    rows.push([
-      m.in_event.id,
-      m.out_event.id,
-      m.in_event.event_time,
-      m.in_event.checkpoint_name,
-      m.out_event.event_time,
-      m.out_event.checkpoint_name,
-      m.distance_miles,
-      m.elapsed_minutes,
-      m.expected_minutes,
-      m.avg_speed_mph,
-      m.confidence,
-      m.plate_score ?? '',
-      m.type_score ?? '',
-      m.color_score ?? '',
-      m.in_event.plate_raw || '',
-      m.out_event.plate_raw || '',
-      m.in_event.vehicle_type || '',
-      m.in_event.vehicle_color || '',
-      m.out_event.vehicle_type || '',
-      m.out_event.vehicle_color || '',
-    ]);
-  }
-  const csv = rows.map(r => r.map(csvEscape).join(',')).join('\n');
-  const blob = new Blob([csv], {type: 'text/csv;charset=utf-8;'});
-  const a = document.createElement('a');
-  a.href = URL.createObjectURL(blob);
-  a.download = 'cut_through_matches.csv';
-  a.click();
-  URL.revokeObjectURL(a.href);
+function eventVehicleLabel(event) {
+  const type = String(event?.vehicle_type || '-');
+  const color = String(event?.vehicle_color || '-');
+  return `${type} / ${color}`;
 }
 
-function exportAllEventsCsv() {
-  const siteId = document.getElementById('site_id').value;
-  const studyPeriod = document.getElementById('study_period').value;
-  if (!siteId) {
-    alert('No site is selected.');
+function eventCheckpointLabel(event) {
+  const name = String(event?.checkpoint_name || '').trim();
+  if (name !== '') return name;
+  const code = String(event?.checkpoint_code || '').trim();
+  if (code !== '') return code;
+  return 'Unknown';
+}
+
+function groupEventsByLocation(events, checkpoints) {
+  const checkpointOrder = new Map();
+  for (let i = 0; i < (checkpoints || []).length; i++) {
+    const checkpointId = Number(checkpoints[i]?.id || 0);
+    if (checkpointId > 0) checkpointOrder.set(checkpointId, i);
+  }
+
+  const groups = new Map();
+  for (const event of (events || [])) {
+    const checkpointId = Number(event?.checkpoint_id || 0);
+    const name = eventCheckpointLabel(event);
+    const key = checkpointId > 0 ? `id:${checkpointId}` : `name:${name.toLowerCase()}`;
+    if (!groups.has(key)) {
+      groups.set(key, { checkpointId, name, events: [] });
+    }
+    groups.get(key).events.push(event);
+  }
+
+  return Array.from(groups.values()).sort((a, b) => {
+    const aOrder = checkpointOrder.has(a.checkpointId) ? checkpointOrder.get(a.checkpointId) : Number.MAX_SAFE_INTEGER;
+    const bOrder = checkpointOrder.has(b.checkpointId) ? checkpointOrder.get(b.checkpointId) : Number.MAX_SAFE_INTEGER;
+    if (aOrder !== bOrder) return aOrder - bOrder;
+    return a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: 'base' });
+  });
+}
+
+function renderAllEvents(events, allEventsBody, allEventsSummary) {
+  allEventsBody.innerHTML = '';
+  if (allEventsSummary) allEventsSummary.textContent = `All Recordings (Chronological) (${events.length})`;
+  if (events.length === 0) {
+    allEventsBody.innerHTML = '<tr><td colspan="8">No recordings in this period.</td></tr>';
     return;
   }
-  const url = `api/export_events_csv.php?site_id=${encodeURIComponent(siteId)}&study_period=${encodeURIComponent(studyPeriod)}`;
-  window.location.href = url;
+  for (const event of events) {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `<td>${escapeHtml(event.id)}</td><td>${escapeHtml(formatEtDateTime(event.event_time))}</td><td>${escapeHtml(eventCheckpointLabel(event))}</td><td>${escapeHtml(event.direction || '')}</td><td>${escapeHtml(event.plate_raw || '')}</td><td>${escapeHtml(eventVehicleLabel(event))}</td><td>${escapeHtml(event.observer_name || '')}</td><td>${escapeHtml(event.notes || '')}</td>`;
+    allEventsBody.appendChild(tr);
+  }
+}
+
+function renderEventsByLocation(events, checkpoints, eventsByLocation, byLocationSummary) {
+  eventsByLocation.innerHTML = '';
+  const groups = groupEventsByLocation(events, checkpoints);
+  if (byLocationSummary) byLocationSummary.textContent = `Recordings by Location (${groups.length} checkpoints)`;
+  if (groups.length === 0) {
+    eventsByLocation.innerHTML = '<div class="small">No recordings in this period.</div>';
+    return;
+  }
+
+  for (const group of groups) {
+    const section = document.createElement('details');
+    section.className = 'section-collapse';
+
+    const summary = document.createElement('summary');
+    summary.textContent = `${group.name} (${group.events.length})`;
+    section.appendChild(summary);
+
+    const body = document.createElement('div');
+    body.className = 'section-collapse-body';
+
+    const table = document.createElement('table');
+    table.innerHTML = '<thead><tr><th>Event #</th><th>Time</th><th>Dir</th><th>Plate</th><th>Vehicle</th><th>Observer</th><th>Comments</th></tr></thead>';
+    const tbody = document.createElement('tbody');
+    for (const event of group.events) {
+      const tr = document.createElement('tr');
+      tr.innerHTML = `<td>${escapeHtml(event.id)}</td><td>${escapeHtml(formatEtDateTime(event.event_time))}</td><td>${escapeHtml(event.direction || '')}</td><td>${escapeHtml(event.plate_raw || '')}</td><td>${escapeHtml(eventVehicleLabel(event))}</td><td>${escapeHtml(event.observer_name || '')}</td><td>${escapeHtml(event.notes || '')}</td>`;
+      tbody.appendChild(tr);
+    }
+    table.appendChild(tbody);
+    body.appendChild(table);
+    section.appendChild(body);
+    eventsByLocation.appendChild(section);
+  }
 }
 
 async function loadDetails() {
@@ -191,22 +246,30 @@ async function loadDetails() {
   const matchesSections = document.getElementById('matchesSections');
   const arrivals = document.getElementById('arrivalsBody');
   const dep = document.getElementById('departuresBody');
+  const allEventsBody = document.getElementById('allEventsBody');
+  const eventsByLocation = document.getElementById('eventsByLocation');
   const arrivalsSummary = document.getElementById('arrivalsSummary');
   const departuresSummary = document.getElementById('departuresSummary');
-  if (!matchesSections || !arrivals || !dep) return;
+  const allEventsSummary = document.getElementById('allEventsSummary');
+  const byLocationSummary = document.getElementById('byLocationSummary');
+  if (!matchesSections || !arrivals || !dep || !allEventsBody || !eventsByLocation) return;
   if (!siteId) {
     matchesCache = [];
     matchesSections.innerHTML = '<div class="small">No accessible site is assigned.</div>';
     arrivals.innerHTML = '<tr><td colspan="4">No accessible site is assigned.</td></tr>';
     dep.innerHTML = '<tr><td colspan="4">No accessible site is assigned.</td></tr>';
+    allEventsBody.innerHTML = '<tr><td colspan="8">No accessible site is assigned.</td></tr>';
+    eventsByLocation.innerHTML = '<div class="small">No accessible site is assigned.</div>';
     if (arrivalsSummary) arrivalsSummary.textContent = 'Local Arrivals (In only) (0)';
     if (departuresSummary) departuresSummary.textContent = 'Local Departures (Out only) (0)';
+    if (allEventsSummary) allEventsSummary.textContent = 'All Recordings (Chronological) (0)';
+    if (byLocationSummary) byLocationSummary.textContent = 'Recordings by Location (0 checkpoints)';
     return;
   }
 
   let data = null;
   try {
-    const res = await fetch(`api/dashboard_data.php?site_id=${siteId}&study_period=${studyPeriod}`);
+    const res = await fetch(`api/dashboard_data.php?site_id=${siteId}&study_period=${studyPeriod}&include_all_events=1`);
     data = await res.json().catch(() => ({ ok: false, error: 'Invalid server response.' }));
   } catch (err) {
     data = { ok: false, error: 'Unable to load details.' };
@@ -216,8 +279,12 @@ async function loadDetails() {
     matchesSections.innerHTML = `<div class="small">${escapeHtml(data.error || 'Unable to load details.')}</div>`;
     arrivals.innerHTML = `<tr><td colspan="4">${escapeHtml(data.error || 'Unable to load arrivals.')}</td></tr>`;
     dep.innerHTML = `<tr><td colspan="4">${escapeHtml(data.error || 'Unable to load departures.')}</td></tr>`;
+    allEventsBody.innerHTML = `<tr><td colspan="8">${escapeHtml(data.error || 'Unable to load recordings.')}</td></tr>`;
+    eventsByLocation.innerHTML = `<div class="small">${escapeHtml(data.error || 'Unable to load recordings by location.')}</div>`;
     if (arrivalsSummary) arrivalsSummary.textContent = 'Local Arrivals (In only) (0)';
     if (departuresSummary) departuresSummary.textContent = 'Local Departures (Out only) (0)';
+    if (allEventsSummary) allEventsSummary.textContent = 'All Recordings (Chronological) (0)';
+    if (byLocationSummary) byLocationSummary.textContent = 'Recordings by Location (0 checkpoints)';
     return;
   }
 
@@ -288,6 +355,10 @@ async function loadDetails() {
     tr.innerHTML = `<td>${escapeHtml(formatEtDateTime(e.event_time))}</td><td>${escapeHtml(e.checkpoint_name)}</td><td>${escapeHtml(e.plate_raw || '')}</td><td>${escapeHtml(e.vehicle_type)} / ${escapeHtml(e.vehicle_color)}</td>`;
     dep.appendChild(tr);
   }
+
+  const allEvents = data.all_events || [];
+  renderAllEvents(allEvents, allEventsBody, allEventsSummary);
+  renderEventsByLocation(allEvents, data.checkpoints || [], eventsByLocation, byLocationSummary);
 }
 
 if (siteSelect) siteSelect.addEventListener('change', loadDetails);
@@ -295,8 +366,6 @@ if (studyPeriodSelect) {
   studyPeriodSelect.addEventListener('change', loadDetails);
   studyPeriodSelect.value = currentStudyPeriod();
 }
-document.getElementById('exportBtn').addEventListener('click', exportCsv);
-document.getElementById('exportAllBtn').addEventListener('click', exportAllEventsCsv);
 loadDetails();
 </script>
 <?php render_foot(); ?>
