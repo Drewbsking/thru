@@ -807,6 +807,9 @@ async function loadDashboard() {
   }
   const highestCheckpointTwoWay = Number(summary.highest_checkpoint_two_way ?? (checkpointTotals.length > 0 ? Math.max(...checkpointTotals) : 0));
   const cutThroughCount = Number(summary.cut_through_count || 0);
+  const cutThroughOverTotalVolumePercent = Number(summary.cut_through_percent ?? (
+    totalVolume > 0 ? ((cutThroughCount / totalVolume) * 100) : 0
+  ));
   const cutThroughOverHighestPercent = Number(summary.cut_through_over_highest_two_way_percent ?? (
     highestCheckpointTwoWay > 0 ? ((cutThroughCount / highestCheckpointTwoWay) * 100) : 0
   ));
@@ -833,6 +836,7 @@ async function loadDashboard() {
   const countCards = [
     kpiCard('Highest Checkpoint Two-Way', highestCheckpointTwoWay),
     kpiCard('Cut-Through Vehicles', cutThroughCount),
+    kpiCard('Cut-Through / Total Volume', `${cutThroughCount}/${totalVolume} (${cutThroughOverTotalVolumePercent.toFixed(2)}%)`),
     kpiCard('Cut-Through / Highest Two-Way', `${cutThroughCount}/${highestCheckpointTwoWay} (${cutThroughOverHighestPercent.toFixed(2)}%)`),
     kpiCard('Local Arrivals (In only)', summary.local_arrivals_count),
     kpiCard('Local Departures (Out only)', summary.local_departures_count),
