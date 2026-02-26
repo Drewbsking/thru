@@ -102,7 +102,6 @@ function kpiCard(label, value, css='') {
 
 function kpiRow(title, cards) {
   return `<section style="margin-bottom:1rem;">
-    <div class="small" style="font-weight:700; margin-bottom:0.4rem;">${escapeHtml(title)}</div>
     <div class="grid three">${cards.join('')}</div>
   </section>`;
 }
