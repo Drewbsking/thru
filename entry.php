@@ -182,6 +182,7 @@ render_head('Data Entry');
         <a id="recentEntriesLink" class="btn secondary" href="recent_entries.php?site_id=<?= (int)$siteId ?>&checkpoint_id=<?= (int)$checkpointId ?>">Recent Entries</a>
       </div>
       <p id="saveStatus" class="status small" style="margin-top:0.7rem;"></p>
+      <p class="small" id="checkpointSummaryInline">Checkpoint Summary: --</p>
     </form>
   <?php endif; ?>
 
@@ -254,6 +255,7 @@ const notesToggle = document.getElementById('notesToggle');
 const notesPanel = document.getElementById('notesPanel');
 const studyPeriodLabel = document.getElementById('studyPeriodLabel');
 const checkpointSummaryLabel = document.getElementById('checkpointSummaryLabel');
+const checkpointSummaryInline = document.getElementById('checkpointSummaryInline');
 const recentEntriesLink = document.getElementById('recentEntriesLink');
 const entryMetaToggle = document.getElementById('entryMetaToggle');
 const entryMetaPanel = document.getElementById('entryMetaPanel');
@@ -524,6 +526,12 @@ function setSessionSavedAtLabel(updatedAt) {
   sessionCommentSavedAtEl.textContent = `Last saved: ${pretty}`;
 }
 
+function setCheckpointSummaryText(text) {
+  const value = String(text || '');
+  if (checkpointSummaryLabel) checkpointSummaryLabel.textContent = value;
+  if (checkpointSummaryInline) checkpointSummaryInline.textContent = value;
+}
+
 function findCurrentUserSessionComment(comments) {
   const list = Array.isArray(comments) ? comments : [];
   return list.find((row) => Number(row?.user_id || 0) === Number(currentUserId || 0)) || null;
@@ -620,23 +628,23 @@ async function saveSessionComment() {
 async function loadCheckpointSummary() {
   const siteId = getSiteId();
   const checkpointId = getCheckpointId();
-  if (!siteId || !checkpointId || !checkpointSummaryLabel) return;
+  if (!siteId || !checkpointId || (!checkpointSummaryLabel && !checkpointSummaryInline)) return;
   const period = getCurrentStudyPeriod();
   try {
     const res = await fetch(`api/dashboard_data.php?site_id=${siteId}&study_period=${period}`);
     const data = await res.json();
     if (!data.ok) {
-      checkpointSummaryLabel.textContent = 'Checkpoint Summary: unavailable';
+      setCheckpointSummaryText('Checkpoint Summary: unavailable');
       return;
     }
     const row = (data.checkpoint_counts_by_id || []).find(r => Number(r.checkpoint_id) === checkpointId);
     if (!row) {
-      checkpointSummaryLabel.textContent = `Checkpoint Summary (${currentStudyPeriodLabel()}): Total 0 (In 0 / Out 0)`;
+      setCheckpointSummaryText(`Checkpoint Summary (${currentStudyPeriodLabel()}): Total 0 (In 0 / Out 0)`);
       return;
     }
-    checkpointSummaryLabel.textContent = `Checkpoint Summary (${currentStudyPeriodLabel()}): Total ${row.total} (In ${row.in} / Out ${row.out})`;
+    setCheckpointSummaryText(`Checkpoint Summary (${currentStudyPeriodLabel()}): Total ${row.total} (In ${row.in} / Out ${row.out})`);
   } catch (err) {
-    checkpointSummaryLabel.textContent = 'Checkpoint Summary: unavailable';
+    setCheckpointSummaryText('Checkpoint Summary: unavailable');
   }
 }
 
