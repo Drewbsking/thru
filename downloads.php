@@ -303,6 +303,16 @@ function matchRows(matches) {
   return rows.length ? rows : [['', '', 'No matches', '', '', '', '']];
 }
 
+function sessionCommentRows(data) {
+  const rows = (data?.session_comments || []).map((row) => [
+    String(row?.checkpoint_label || row?.checkpoint_name || row?.checkpoint_code || '--'),
+    String(row?.collector_username || '--'),
+    formatEtDateTime(row?.updated_at || ''),
+    String(row?.comment_text || ''),
+  ]);
+  return rows.length ? rows : [['--', '--', '--', 'No session observations recorded']];
+}
+
 function rawEventRows(morningData, afternoonData) {
   const rows = [];
   for (const e of (morningData?.all_events || [])) {
@@ -491,6 +501,14 @@ async function downloadPdfReport() {
         startY: y,
         head: [['Checkpoint', 'In', 'Out', 'Total (Two-Way)']],
         body: checkpointCountRows(data),
+      });
+      y = pdf.lastAutoTable.finalY + 12;
+
+      addAutoTable(pdf, {
+        startY: y,
+        head: [['Checkpoint', 'Collector', 'Last Updated (ET)', 'Observation Comment']],
+        body: sessionCommentRows(data),
+        columnStyles: { 0: { cellWidth: 120 }, 1: { cellWidth: 90 }, 2: { cellWidth: 120 }, 3: { cellWidth: contentWidth - 330 } },
       });
       y = pdf.lastAutoTable.finalY + 12;
 

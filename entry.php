@@ -170,7 +170,7 @@ render_head('Data Entry');
 
       <div class="choice-block">
         <div class="notes-toggle-row">
-          <div class="choice-title" style="margin-bottom:0;">Comments (Optional)</div>
+          <div class="choice-title" style="margin-bottom:0;">Event Comment (Optional, this vehicle only)</div>
           <button type="button" id="notesToggle" class="secondary" aria-expanded="false" aria-controls="notesPanel">Show</button>
         </div>
         <div id="notesPanel" hidden style="margin-top:0.35rem;">
@@ -196,11 +196,40 @@ render_head('Data Entry');
       <p class="small" id="studyPeriodLabel">Current Study Period: --</p>
       <p class="small" id="checkpointSummaryLabel">Checkpoint Summary: --</p>
     </div>
+    <div class="card" style="margin-top:0.75rem;">
+      <h3 style="margin-bottom:0.4rem;">Session Observation (AM/PM)</h3>
+      <p class="small" style="margin-top:0;">Period-level note for this checkpoint and collector. This is separate from per-event comments.</p>
+      <div class="form-row">
+        <div>
+          <label>Study Period</label>
+          <select id="session_period">
+            <option value="morning">Morning Study</option>
+            <option value="afternoon">Afternoon Study</option>
+          </select>
+        </div>
+        <div>
+          <label>Study Date (ET)</label>
+          <input id="session_study_date_display" type="text" readonly>
+        </div>
+      </div>
+      <div class="form-row" style="grid-template-columns: 1fr;">
+        <div>
+          <label for="session_comment_text">Observation Comment</label>
+          <textarea id="session_comment_text" maxlength="1000" placeholder="Road conditions, queueing, unusual activity, weather impact, etc."></textarea>
+        </div>
+      </div>
+      <div class="actions" style="margin-top:0.3rem;">
+        <button type="button" id="saveSessionCommentBtn">Save Session Comment</button>
+      </div>
+      <p id="sessionCommentStatus" class="status small" style="margin-top:0.6rem;"></p>
+      <p id="sessionCommentSavedAt" class="small">Last saved: --</p>
+    </div>
   <?php endif; ?>
 </section>
 
 <script>
 const currentUsername = <?= json_encode(current_username(), JSON_UNESCAPED_SLASHES) ?>;
+const currentUserId = <?= (int)current_user_id() ?>;
 const initialSiteId = <?= (int)$siteId ?>;
 const initialCheckpointId = <?= (int)$checkpointId ?>;
 const initialSiteName = <?= json_encode((string)($site['name'] ?? ''), JSON_UNESCAPED_SLASHES) ?>;
@@ -228,6 +257,12 @@ const checkpointSummaryLabel = document.getElementById('checkpointSummaryLabel')
 const recentEntriesLink = document.getElementById('recentEntriesLink');
 const entryMetaToggle = document.getElementById('entryMetaToggle');
 const entryMetaPanel = document.getElementById('entryMetaPanel');
+const sessionPeriodInput = document.getElementById('session_period');
+const sessionStudyDateDisplay = document.getElementById('session_study_date_display');
+const sessionCommentInput = document.getElementById('session_comment_text');
+const saveSessionCommentBtn = document.getElementById('saveSessionCommentBtn');
+const sessionCommentStatusEl = document.getElementById('sessionCommentStatus');
+const sessionCommentSavedAtEl = document.getElementById('sessionCommentSavedAt');
 const isCoarsePointer = window.matchMedia('(pointer: coarse)').matches;
 
 function forceUppercaseInput(el) {
@@ -320,6 +355,35 @@ function formatEtDateTime(value) {
   const ampm = hour24 >= 12 ? 'PM' : 'AM';
   const hour12 = (hour24 % 12) || 12;
   return `${monthName} ${day}, ${year}, ${hour12}:${minute} ${ampm} ET`;
+}
+
+function getEtStudyDateYmd() {
+  const parts = new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'America/New_York',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit'
+  }).formatToParts(new Date());
+  const year = parts.find((p) => p.type === 'year')?.value || '';
+  const month = parts.find((p) => p.type === 'month')?.value || '';
+  const day = parts.find((p) => p.type === 'day')?.value || '';
+  if (!year || !month || !day) return '';
+  return `${year}-${month}-${day}`;
+}
+
+function formatEtDateOnly(ymd) {
+  const raw = String(ymd || '').trim();
+  const m = raw.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (!m) return raw || '--';
+  const year = Number(m[1]);
+  const month = Number(m[2]);
+  const day = Number(m[3]);
+  const monthName = new Intl.DateTimeFormat('en-US', { month: 'long' }).format(new Date(year, month - 1, day));
+  return `${monthName} ${day}, ${year}`;
+}
+
+function sessionPeriodLabel(period) {
+  return period === 'afternoon' ? 'Afternoon Study' : 'Morning Study';
 }
 
 function notifySuccess() {
@@ -433,6 +497,126 @@ function syncRecentEntriesLink() {
   recentEntriesLink.href = params.toString() !== '' ? `recent_entries.php?${params.toString()}` : 'recent_entries.php';
 }
 
+function selectedSessionPeriod() {
+  if (!sessionPeriodInput) return getCurrentStudyPeriod();
+  const value = String(sessionPeriodInput.value || '').toLowerCase();
+  return value === 'afternoon' ? 'afternoon' : 'morning';
+}
+
+function setSessionStatus(message, mode = '') {
+  if (!sessionCommentStatusEl) return;
+  sessionCommentStatusEl.textContent = String(message || '');
+  const classes = ['status', 'small'];
+  if (mode === 'ok' || mode === 'warn') classes.push(mode);
+  sessionCommentStatusEl.className = classes.join(' ');
+}
+
+function updateSessionDateDisplay() {
+  if (!sessionStudyDateDisplay) return '';
+  const ymd = getEtStudyDateYmd();
+  sessionStudyDateDisplay.value = formatEtDateOnly(ymd);
+  return ymd;
+}
+
+function setSessionSavedAtLabel(updatedAt) {
+  if (!sessionCommentSavedAtEl) return;
+  const pretty = formatEtDateTime(updatedAt);
+  sessionCommentSavedAtEl.textContent = `Last saved: ${pretty}`;
+}
+
+function findCurrentUserSessionComment(comments) {
+  const list = Array.isArray(comments) ? comments : [];
+  return list.find((row) => Number(row?.user_id || 0) === Number(currentUserId || 0)) || null;
+}
+
+async function loadSessionComment() {
+  if (!sessionCommentInput) return;
+  const siteId = getSiteId();
+  const checkpointId = getCheckpointId();
+  const studyPeriod = selectedSessionPeriod();
+  const studyDate = updateSessionDateDisplay();
+  if (!siteId || !checkpointId || !studyDate) {
+    sessionCommentInput.value = '';
+    setSessionSavedAtLabel('');
+    setSessionStatus('Select a valid site/checkpoint first.', 'warn');
+    return;
+  }
+
+  setSessionStatus('Loading session comment...');
+  const params = new URLSearchParams();
+  params.set('site_id', String(siteId));
+  params.set('checkpoint_id', String(checkpointId));
+  params.set('study_period', studyPeriod);
+  params.set('study_date', studyDate);
+
+  let data = null;
+  try {
+    const res = await fetch(`api/study_period_comments.php?${params.toString()}`);
+    data = await res.json();
+  } catch (err) {
+    data = { ok: false, error: 'Unable to load session comment.' };
+  }
+  if (!data?.ok) {
+    setSessionStatus(data?.error || 'Unable to load session comment.', 'warn');
+    return;
+  }
+
+  const mine = findCurrentUserSessionComment(data.comments || []);
+  sessionCommentInput.value = mine?.comment_text || '';
+  setSessionSavedAtLabel(mine?.updated_at || '');
+  setSessionStatus(`Ready for ${sessionPeriodLabel(studyPeriod)}.`);
+}
+
+async function saveSessionComment() {
+  if (!sessionCommentInput || !saveSessionCommentBtn) return;
+  const siteId = getSiteId();
+  const checkpointId = getCheckpointId();
+  const studyPeriod = selectedSessionPeriod();
+  const studyDate = updateSessionDateDisplay();
+  if (!siteId || !checkpointId || !studyDate) {
+    setSessionStatus('Select a valid site/checkpoint first.', 'warn');
+    return;
+  }
+
+  const payload = new FormData();
+  payload.append('csrf_token', entryCsrfToken);
+  payload.append('site_id', String(siteId));
+  payload.append('checkpoint_id', String(checkpointId));
+  payload.append('study_period', studyPeriod);
+  payload.append('study_date', studyDate);
+  payload.append('comment_text', String(sessionCommentInput.value || ''));
+
+  saveSessionCommentBtn.disabled = true;
+  setSessionStatus('Saving session comment...');
+
+  let data = null;
+  try {
+    const res = await fetch('api/study_period_comments.php', { method: 'POST', body: payload });
+    data = await res.json();
+  } catch (err) {
+    data = { ok: false, error: 'Unable to save session comment.' };
+  } finally {
+    saveSessionCommentBtn.disabled = false;
+  }
+
+  if (!data?.ok) {
+    setSessionStatus(data?.error || 'Unable to save session comment.', 'warn');
+    return;
+  }
+
+  if (data.deleted) {
+    sessionCommentInput.value = '';
+    setSessionSavedAtLabel('');
+    setSessionStatus('Session comment cleared.', 'ok');
+    return;
+  }
+
+  const saved = data.comment || {};
+  sessionCommentInput.value = String(saved.comment_text || sessionCommentInput.value || '');
+  setSessionSavedAtLabel(saved.updated_at || '');
+  setSessionStatus(`Session comment saved for ${sessionPeriodLabel(studyPeriod)}.`, 'ok');
+}
+
 async function loadCheckpointSummary() {
   const siteId = getSiteId();
   const checkpointId = getCheckpointId();
@@ -460,7 +644,10 @@ async function refreshEntryContext() {
   if (studyPeriodLabel) {
     studyPeriodLabel.textContent = `Current Study Period: ${currentStudyPeriodLabel()}`;
   }
-  await loadCheckpointSummary();
+  await Promise.all([
+    loadCheckpointSummary(),
+    loadSessionComment(),
+  ]);
 }
 
 if (siteInput && cpInput) {
@@ -506,6 +693,13 @@ if (cpInput) {
     syncRecentEntriesLink();
     await refreshEntryContext();
   });
+}
+if (sessionPeriodInput) {
+  sessionPeriodInput.value = getCurrentStudyPeriod();
+  sessionPeriodInput.addEventListener('change', loadSessionComment);
+}
+if (saveSessionCommentBtn) {
+  saveSessionCommentBtn.addEventListener('click', saveSessionComment);
 }
 syncGreeting();
 syncContextLabel();

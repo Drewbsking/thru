@@ -23,10 +23,12 @@
 - Data collectors are assigned per checkpoint in Site Setup and auto-attached to event records in Data Entry.
 - Checkpoint codes are auto-numbered per site (`1`, `2`, `3`, ...); admins only set display names.
 - Data Entry includes duplicate/ambiguous-plate warning prompts before final save.
+- Data Entry includes period-level `Session Observation (AM/PM)` comments scoped to collector + checkpoint + date + period.
 
 ## APIs
 - `api/submit_event.php`
 - `api/dashboard_data.php`
+- `api/study_period_comments.php`
 - `api/site_context.php`
 - `api/save_setup.php`
 - `api/list_distances.php`
@@ -45,6 +47,7 @@
   - `checkpoint_assignments`: Which collector can record at which checkpoint.
   - `checkpoint_distances`: Distance in miles for each `from -> to` checkpoint pair.
   - `traffic_events`: All captured observations (In/Out, plate/type/color, checkpoint, timestamp, notes, user owner).
+  - `study_period_comments`: Period-level observations by collector/checkpoint/date (`morning` or `afternoon`), upserted by unique scope.
 - DB credentials are read from env vars if present:
   - `THRU_DB_HOST`
   - `THRU_DB_USER`

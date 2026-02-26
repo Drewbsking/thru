@@ -82,3 +82,21 @@ CREATE TABLE IF NOT EXISTS checkpoint_assignments (
   CONSTRAINT fk_assignment_site FOREIGN KEY (site_id) REFERENCES sites(id) ON DELETE CASCADE,
   CONSTRAINT fk_assignment_checkpoint FOREIGN KEY (checkpoint_id) REFERENCES checkpoints(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS study_period_comments (
+  id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  site_id INT UNSIGNED NOT NULL,
+  checkpoint_id INT UNSIGNED NOT NULL,
+  user_id INT UNSIGNED NOT NULL,
+  study_date DATE NOT NULL,
+  study_period ENUM('morning', 'afternoon') NOT NULL,
+  comment_text VARCHAR(1000) NOT NULL,
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  UNIQUE KEY uniq_comment_scope (site_id, checkpoint_id, user_id, study_date, study_period),
+  KEY idx_comment_site_period_date (site_id, study_date, study_period),
+  KEY idx_comment_user_date_period (user_id, study_date, study_period),
+  CONSTRAINT fk_period_comment_site FOREIGN KEY (site_id) REFERENCES sites(id) ON DELETE CASCADE,
+  CONSTRAINT fk_period_comment_checkpoint FOREIGN KEY (checkpoint_id) REFERENCES checkpoints(id) ON DELETE CASCADE,
+  CONSTRAINT fk_period_comment_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

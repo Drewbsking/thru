@@ -51,19 +51,77 @@ $loadEvents = static function (int $siteId, string $from, string $to): array {
     return $rows;
 };
 
+$loadSessionComments = static function (int $siteId, string $studyDate, string $studyPeriod): array {
+    $commentStmt = db_prepare('SELECT spc.id, spc.site_id, spc.checkpoint_id, spc.user_id, spc.study_date, spc.study_period, spc.comment_text, spc.created_at, spc.updated_at,
+        c.checkpoint_code, c.display_name AS checkpoint_name, u.username AS collector_username
+        FROM study_period_comments spc
+        INNER JOIN checkpoints c ON c.id = spc.checkpoint_id
+        INNER JOIN users u ON u.id = spc.user_id
+        WHERE spc.site_id = ? AND spc.study_date = ? AND spc.study_period = ?
+        ORDER BY CAST(c.checkpoint_code AS UNSIGNED) ASC, c.checkpoint_code ASC, u.username ASC');
+    $commentStmt->bind_param('iss', $siteId, $studyDate, $studyPeriod);
+    $commentStmt->execute();
+    $rows = $commentStmt->get_result()?->fetch_all(MYSQLI_ASSOC) ?: [];
+    $commentStmt->close();
+
+    foreach ($rows as &$row) {
+        $checkpointName = trim((string)($row['checkpoint_name'] ?? ''));
+        $checkpointCode = trim((string)($row['checkpoint_code'] ?? ''));
+        $row['checkpoint_label'] = $checkpointName !== '' && $checkpointCode !== ''
+            ? $checkpointName . ' (' . $checkpointCode . ')'
+            : ($checkpointName !== '' ? $checkpointName : $checkpointCode);
+        $row['id'] = (int)($row['id'] ?? 0);
+        $row['site_id'] = (int)($row['site_id'] ?? 0);
+        $row['checkpoint_id'] = (int)($row['checkpoint_id'] ?? 0);
+        $row['user_id'] = (int)($row['user_id'] ?? 0);
+    }
+    unset($row);
+
+    return $rows;
+};
+
+$latestDateWithPeriodData = static function (int $siteId, string $studyPeriod): ?string {
+    $periodStart = $studyPeriod === 'morning' ? '00:00:00' : '12:00:00';
+    $periodEnd = $studyPeriod === 'morning' ? '11:59:59' : '23:59:59';
+
+    $eventLatestStmt = db_prepare('SELECT MAX(DATE(event_time)) AS latest_date
+        FROM traffic_events
+        WHERE site_id = ? AND TIME(event_time) >= ? AND TIME(event_time) <= ?');
+    $eventLatestStmt->bind_param('iss', $siteId, $periodStart, $periodEnd);
+    $eventLatestStmt->execute();
+    $eventLatest = trim((string)($eventLatestStmt->get_result()?->fetch_assoc()['latest_date'] ?? ''));
+    $eventLatestStmt->close();
+
+    $commentLatestStmt = db_prepare('SELECT MAX(study_date) AS latest_date
+        FROM study_period_comments
+        WHERE site_id = ? AND study_period = ?');
+    $commentLatestStmt->bind_param('is', $siteId, $studyPeriod);
+    $commentLatestStmt->execute();
+    $commentLatest = trim((string)($commentLatestStmt->get_result()?->fetch_assoc()['latest_date'] ?? ''));
+    $commentLatestStmt->close();
+
+    if ($eventLatest === '' && $commentLatest === '') {
+        return null;
+    }
+    if ($eventLatest === '') {
+        return $commentLatest;
+    }
+    if ($commentLatest === '') {
+        return $eventLatest;
+    }
+    return strcmp($eventLatest, $commentLatest) >= 0 ? $eventLatest : $commentLatest;
+};
+
 $events = $loadEvents($siteId, $from, $to);
-if (!$studyDateProvided && count($events) === 0) {
-    $latestStmt = db_prepare('SELECT DATE(MAX(event_time)) AS latest_date FROM traffic_events WHERE site_id = ?');
-    $latestStmt->bind_param('i', $siteId);
-    $latestStmt->execute();
-    $latestRow = $latestStmt->get_result()?->fetch_assoc() ?: [];
-    $latestStmt->close();
-    $latestDate = trim((string)($latestRow['latest_date'] ?? ''));
-    if ($latestDate !== '' && $latestDate !== $studyDate) {
+$sessionComments = $loadSessionComments($siteId, $studyDate, $studyPeriod);
+if (!$studyDateProvided && count($events) === 0 && count($sessionComments) === 0) {
+    $latestDate = $latestDateWithPeriodData($siteId, $studyPeriod);
+    if ($latestDate !== null && $latestDate !== $studyDate) {
         $studyDate = $latestDate;
         $from = $studyDate . ' ' . $periodStart;
         $to = $studyDate . ' ' . $periodEnd;
         $events = $loadEvents($siteId, $from, $to);
+        $sessionComments = $loadSessionComments($siteId, $studyDate, $studyPeriod);
     }
 }
 
@@ -159,4 +217,5 @@ json_response([
     'unmatched_out' => $analysis['unmatched_out'],
     'recent_events' => $recent,
     'all_events' => $includeAllEvents ? $events : [],
+    'session_comments' => $sessionComments,
 ]);

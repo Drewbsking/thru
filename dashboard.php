@@ -70,6 +70,14 @@ render_head('Dashboard');
 </section>
 
 <section class="card" style="margin-top:1rem;">
+  <h2>Session Observations</h2>
+  <table>
+    <thead><tr><th>Checkpoint</th><th>Collector</th><th>Period</th><th>Last Updated (ET)</th><th>Observation Comment</th></tr></thead>
+    <tbody id="sessionCommentsBody"><tr><td colspan="5">Loading...</td></tr></tbody>
+  </table>
+</section>
+
+<section class="card" style="margin-top:1rem;">
   <h2>Recent Events</h2>
   <table>
     <thead><tr><th>Event #</th><th>Time</th><th>Checkpoint</th><th>Dir</th><th>Plate</th><th>Type</th><th>Color</th><th>Observer</th></tr></thead>
@@ -218,6 +226,14 @@ function formatEtTimeOnly(value) {
   const ampm = hour24 >= 12 ? 'PM' : 'AM';
   const hour12 = (hour24 % 12) || 12;
   return `${hour12}:${minute} ${ampm} ET`;
+}
+
+function formatStudyPeriodLabel(period) {
+  return String(period || '').toLowerCase() === 'afternoon' ? 'Afternoon Study' : 'Morning Study';
+}
+
+function commentCellHtml(value) {
+  return escapeHtml(String(value ?? '')).replace(/\n/g, '<br>');
 }
 
 function formatEtDateOnly(ymd) {
@@ -398,6 +414,16 @@ function matchRows(matches) {
   return rows.length ? rows : [['', '', 'No matches', '', '', '', '']];
 }
 
+function sessionCommentRows(data) {
+  const rows = (data?.session_comments || []).map((row) => [
+    String(row?.checkpoint_label || row?.checkpoint_name || row?.checkpoint_code || '--'),
+    String(row?.collector_username || '--'),
+    formatEtDateTime(row?.updated_at || ''),
+    String(row?.comment_text || ''),
+  ]);
+  return rows.length ? rows : [['--', '--', '--', 'No session observations recorded']];
+}
+
 function rawEventRows(morningData, afternoonData) {
   const rows = [];
   for (const e of (morningData?.all_events || [])) {
@@ -575,6 +601,14 @@ async function downloadFormalReportPdf() {
         startY: y,
         head: [['Checkpoint', 'In', 'Out', 'Total (Two-Way)']],
         body: checkpointCountRows(data),
+      });
+      y = pdf.lastAutoTable.finalY + 12;
+
+      addAutoTable(pdf, {
+        startY: y,
+        head: [['Checkpoint', 'Collector', 'Last Updated (ET)', 'Observation Comment']],
+        body: sessionCommentRows(data),
+        columnStyles: { 0: { cellWidth: 120 }, 1: { cellWidth: 90 }, 2: { cellWidth: 120 }, 3: { cellWidth: contentWidth - 330 } },
       });
       y = pdf.lastAutoTable.finalY + 12;
 
@@ -778,6 +812,23 @@ async function loadDashboard() {
         matchBody.appendChild(tr);
       });
     }
+  }
+
+  const sessionCommentsBody = document.getElementById('sessionCommentsBody');
+  sessionCommentsBody.innerHTML = '';
+  const sessionComments = json.session_comments || [];
+  if (!sessionComments.length) {
+    sessionCommentsBody.innerHTML = '<tr><td colspan="5">No session observations for this period/date.</td></tr>';
+  } else {
+    sessionComments.forEach((row) => {
+      const tr = document.createElement('tr');
+      tr.innerHTML = `<td>${escapeHtml(row.checkpoint_label || row.checkpoint_name || row.checkpoint_code || '--')}</td>
+        <td>${escapeHtml(row.collector_username || '--')}</td>
+        <td>${escapeHtml(formatStudyPeriodLabel(row.study_period || json.study_period))}</td>
+        <td>${escapeHtml(formatEtDateTime(row.updated_at || ''))}</td>
+        <td>${commentCellHtml(row.comment_text || '')}</td>`;
+      sessionCommentsBody.appendChild(tr);
+    });
   }
 
   const recentBody = document.getElementById('recentBody');

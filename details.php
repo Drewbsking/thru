@@ -69,6 +69,19 @@ render_head('Cut-Through Details');
 </section>
 
 <section class="card" style="margin-top:1rem;">
+  <h2>Session Observations</h2>
+  <details class="section-collapse">
+    <summary id="sessionCommentsSummary">Session Observations (0)</summary>
+    <div class="section-collapse-body">
+      <table>
+        <thead><tr><th>Checkpoint</th><th>Collector</th><th>Period</th><th>Last Updated (ET)</th><th>Observation Comment</th></tr></thead>
+        <tbody id="sessionCommentsBody"></tbody>
+      </table>
+    </div>
+  </details>
+</section>
+
+<section class="card" style="margin-top:1rem;">
   <h2>Data Collection Details</h2>
   <p class="small">Complete list of raw recordings for the selected site and study period.</p>
   <details class="section-collapse">
@@ -149,6 +162,14 @@ function formatEtDateTime(value) {
   const ampm = hour24 >= 12 ? 'PM' : 'AM';
   const hour12 = (hour24 % 12) || 12;
   return `${monthName} ${day}, ${year}, ${hour12}:${minute} ${ampm} ET`;
+}
+
+function formatStudyPeriodLabel(period) {
+  return String(period || '').toLowerCase() === 'afternoon' ? 'Afternoon Study' : 'Morning Study';
+}
+
+function commentCellHtml(value) {
+  return escapeHtml(String(value ?? '')).replace(/\n/g, '<br>');
 }
 
 function eventVehicleLabel(event) {
@@ -246,22 +267,26 @@ async function loadDetails() {
   const matchesSections = document.getElementById('matchesSections');
   const arrivals = document.getElementById('arrivalsBody');
   const dep = document.getElementById('departuresBody');
+  const sessionCommentsBody = document.getElementById('sessionCommentsBody');
   const allEventsBody = document.getElementById('allEventsBody');
   const eventsByLocation = document.getElementById('eventsByLocation');
   const arrivalsSummary = document.getElementById('arrivalsSummary');
   const departuresSummary = document.getElementById('departuresSummary');
+  const sessionCommentsSummary = document.getElementById('sessionCommentsSummary');
   const allEventsSummary = document.getElementById('allEventsSummary');
   const byLocationSummary = document.getElementById('byLocationSummary');
-  if (!matchesSections || !arrivals || !dep || !allEventsBody || !eventsByLocation) return;
+  if (!matchesSections || !arrivals || !dep || !sessionCommentsBody || !allEventsBody || !eventsByLocation) return;
   if (!siteId) {
     matchesCache = [];
     matchesSections.innerHTML = '<div class="small">No accessible site is assigned.</div>';
     arrivals.innerHTML = '<tr><td colspan="4">No accessible site is assigned.</td></tr>';
     dep.innerHTML = '<tr><td colspan="4">No accessible site is assigned.</td></tr>';
+    sessionCommentsBody.innerHTML = '<tr><td colspan="5">No accessible site is assigned.</td></tr>';
     allEventsBody.innerHTML = '<tr><td colspan="8">No accessible site is assigned.</td></tr>';
     eventsByLocation.innerHTML = '<div class="small">No accessible site is assigned.</div>';
     if (arrivalsSummary) arrivalsSummary.textContent = 'Local Arrivals (In only) (0)';
     if (departuresSummary) departuresSummary.textContent = 'Local Departures (Out only) (0)';
+    if (sessionCommentsSummary) sessionCommentsSummary.textContent = 'Session Observations (0)';
     if (allEventsSummary) allEventsSummary.textContent = 'All Recordings (Chronological) (0)';
     if (byLocationSummary) byLocationSummary.textContent = 'Recordings by Location (0 checkpoints)';
     return;
@@ -279,10 +304,12 @@ async function loadDetails() {
     matchesSections.innerHTML = `<div class="small">${escapeHtml(data.error || 'Unable to load details.')}</div>`;
     arrivals.innerHTML = `<tr><td colspan="4">${escapeHtml(data.error || 'Unable to load arrivals.')}</td></tr>`;
     dep.innerHTML = `<tr><td colspan="4">${escapeHtml(data.error || 'Unable to load departures.')}</td></tr>`;
+    sessionCommentsBody.innerHTML = `<tr><td colspan="5">${escapeHtml(data.error || 'Unable to load session observations.')}</td></tr>`;
     allEventsBody.innerHTML = `<tr><td colspan="8">${escapeHtml(data.error || 'Unable to load recordings.')}</td></tr>`;
     eventsByLocation.innerHTML = `<div class="small">${escapeHtml(data.error || 'Unable to load recordings by location.')}</div>`;
     if (arrivalsSummary) arrivalsSummary.textContent = 'Local Arrivals (In only) (0)';
     if (departuresSummary) departuresSummary.textContent = 'Local Departures (Out only) (0)';
+    if (sessionCommentsSummary) sessionCommentsSummary.textContent = 'Session Observations (0)';
     if (allEventsSummary) allEventsSummary.textContent = 'All Recordings (Chronological) (0)';
     if (byLocationSummary) byLocationSummary.textContent = 'Recordings by Location (0 checkpoints)';
     return;
@@ -354,6 +381,23 @@ async function loadDetails() {
     const tr = document.createElement('tr');
     tr.innerHTML = `<td>${escapeHtml(formatEtDateTime(e.event_time))}</td><td>${escapeHtml(e.checkpoint_name)}</td><td>${escapeHtml(e.plate_raw || '')}</td><td>${escapeHtml(e.vehicle_type)} / ${escapeHtml(e.vehicle_color)}</td>`;
     dep.appendChild(tr);
+  }
+
+  sessionCommentsBody.innerHTML = '';
+  const sessionComments = data.session_comments || [];
+  if (sessionCommentsSummary) sessionCommentsSummary.textContent = `Session Observations (${sessionComments.length})`;
+  if (sessionComments.length === 0) {
+    sessionCommentsBody.innerHTML = '<tr><td colspan="5">No session observations in this period/date.</td></tr>';
+  } else {
+    for (const row of sessionComments) {
+      const tr = document.createElement('tr');
+      tr.innerHTML = `<td>${escapeHtml(row.checkpoint_label || row.checkpoint_name || row.checkpoint_code || '--')}</td>
+        <td>${escapeHtml(row.collector_username || '--')}</td>
+        <td>${escapeHtml(formatStudyPeriodLabel(row.study_period || studyPeriod))}</td>
+        <td>${escapeHtml(formatEtDateTime(row.updated_at || ''))}</td>
+        <td>${commentCellHtml(row.comment_text || '')}</td>`;
+      sessionCommentsBody.appendChild(tr);
+    }
   }
 
   const allEvents = data.all_events || [];
