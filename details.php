@@ -50,20 +50,26 @@ render_head('Cut-Through Details');
 
 <section class="card" style="margin-top:1rem;">
   <h2>Matched Cut-Through Events</h2>
-  <table>
-    <thead><tr><th>In Event #</th><th>Out Event #</th><th>In Time</th><th>In CP</th><th>Out Time</th><th>Out CP</th><th>Plate In</th><th>Plate Out</th><th>Distance</th><th>Elapsed</th><th>Expected</th><th>Avg Speed</th><th>Confidence</th><th>Score Detail</th><th>Vehicle In</th><th>Vehicle Out</th></tr></thead>
-    <tbody id="matchesBody"></tbody>
-  </table>
+  <p class="small">Expand each route heading to view its matched rows.</p>
+  <div id="matchesSections"></div>
 </section>
 
 <section class="grid two" style="margin-top:1rem;">
   <article class="card">
-    <h2>Local Arrivals (In only)</h2>
-    <table><thead><tr><th>Time</th><th>Checkpoint</th><th>Plate</th><th>Vehicle</th></tr></thead><tbody id="arrivalsBody"></tbody></table>
+    <details class="section-collapse">
+      <summary id="arrivalsSummary">Local Arrivals (In only)</summary>
+      <div class="section-collapse-body">
+        <table><thead><tr><th>Time</th><th>Checkpoint</th><th>Plate</th><th>Vehicle</th></tr></thead><tbody id="arrivalsBody"></tbody></table>
+      </div>
+    </details>
   </article>
   <article class="card">
-    <h2>Local Departures (Out only)</h2>
-    <table><thead><tr><th>Time</th><th>Checkpoint</th><th>Plate</th><th>Vehicle</th></tr></thead><tbody id="departuresBody"></tbody></table>
+    <details class="section-collapse">
+      <summary id="departuresSummary">Local Departures (Out only)</summary>
+      <div class="section-collapse-body">
+        <table><thead><tr><th>Time</th><th>Checkpoint</th><th>Plate</th><th>Vehicle</th></tr></thead><tbody id="departuresBody"></tbody></table>
+      </div>
+    </details>
   </article>
 </section>
 
@@ -182,15 +188,19 @@ function exportAllEventsCsv() {
 async function loadDetails() {
   const siteId = Number(siteSelect?.value || 0);
   const studyPeriod = studyPeriodSelect?.value || 'morning';
-  const matchBody = document.getElementById('matchesBody');
+  const matchesSections = document.getElementById('matchesSections');
   const arrivals = document.getElementById('arrivalsBody');
   const dep = document.getElementById('departuresBody');
-  if (!matchBody || !arrivals || !dep) return;
+  const arrivalsSummary = document.getElementById('arrivalsSummary');
+  const departuresSummary = document.getElementById('departuresSummary');
+  if (!matchesSections || !arrivals || !dep) return;
   if (!siteId) {
     matchesCache = [];
-    matchBody.innerHTML = '<tr><td colspan="16">No accessible site is assigned.</td></tr>';
+    matchesSections.innerHTML = '<div class="small">No accessible site is assigned.</div>';
     arrivals.innerHTML = '<tr><td colspan="4">No accessible site is assigned.</td></tr>';
     dep.innerHTML = '<tr><td colspan="4">No accessible site is assigned.</td></tr>';
+    if (arrivalsSummary) arrivalsSummary.textContent = 'Local Arrivals (In only) (0)';
+    if (departuresSummary) departuresSummary.textContent = 'Local Departures (Out only) (0)';
     return;
   }
 
@@ -203,18 +213,20 @@ async function loadDetails() {
   }
   if (!data.ok) {
     matchesCache = [];
-    matchBody.innerHTML = `<tr><td colspan="16">${escapeHtml(data.error || 'Unable to load details.')}</td></tr>`;
+    matchesSections.innerHTML = `<div class="small">${escapeHtml(data.error || 'Unable to load details.')}</div>`;
     arrivals.innerHTML = `<tr><td colspan="4">${escapeHtml(data.error || 'Unable to load arrivals.')}</td></tr>`;
     dep.innerHTML = `<tr><td colspan="4">${escapeHtml(data.error || 'Unable to load departures.')}</td></tr>`;
+    if (arrivalsSummary) arrivalsSummary.textContent = 'Local Arrivals (In only) (0)';
+    if (departuresSummary) departuresSummary.textContent = 'Local Departures (Out only) (0)';
     return;
   }
 
   matchesCache = data.matches || [];
 
-  matchBody.innerHTML = '';
+  matchesSections.innerHTML = '';
   const routeGroups = groupMatchesByRoute(matchesCache);
   if (routeGroups.length === 0) {
-    matchBody.innerHTML = '<tr><td colspan="16">No cut-through matches in this period.</td></tr>';
+    matchesSections.innerHTML = '<div class="small">No cut-through matches in this period.</div>';
   } else {
     const totalVolume = Number(data?.summary?.total_volume || 0);
     for (const [route, matches] of routeGroups) {
@@ -222,10 +234,17 @@ async function loadDetails() {
       const legAvgSpeed = matches.length > 0
         ? (matches.reduce((acc, m) => acc + Number(m?.avg_speed_mph || 0), 0) / matches.length).toFixed(2)
         : '0.00';
-      const section = document.createElement('tr');
-      section.innerHTML = `<td colspan="16" style="background:#eef2ff; font-weight:700;">${escapeHtml(route)} (${escapeHtml(matches.length)}, ${escapeHtml(legPercent)}% of total volume, avg ${escapeHtml(legAvgSpeed)} mph)</td>`;
-      matchBody.appendChild(section);
+      const section = document.createElement('details');
+      section.className = 'section-collapse';
+      const summary = document.createElement('summary');
+      summary.innerHTML = `${escapeHtml(route)} (${escapeHtml(matches.length)}, ${escapeHtml(legPercent)}% of total volume, avg ${escapeHtml(legAvgSpeed)} mph)`;
+      section.appendChild(summary);
 
+      const body = document.createElement('div');
+      body.className = 'section-collapse-body';
+      const table = document.createElement('table');
+      table.innerHTML = '<thead><tr><th>In Event #</th><th>Out Event #</th><th>In Time</th><th>In CP</th><th>Out Time</th><th>Out CP</th><th>Plate In</th><th>Plate Out</th><th>Distance</th><th>Elapsed</th><th>Expected</th><th>Avg Speed</th><th>Confidence</th><th>Score Detail</th><th>Vehicle In</th><th>Vehicle Out</th></tr></thead>';
+      const tbody = document.createElement('tbody');
       for (const m of matches) {
         const plateIn = m.in_event.plate_raw || '';
         const plateOut = m.out_event.plate_raw || '';
@@ -236,15 +255,24 @@ async function loadDetails() {
         tr.innerHTML = `<td>${escapeHtml(m.in_event.id)}</td><td>${escapeHtml(m.out_event.id)}</td><td>${escapeHtml(formatEtDateTime(m.in_event.event_time))}</td><td>${escapeHtml(m.in_event.checkpoint_name)}</td>
           <td>${escapeHtml(formatEtDateTime(m.out_event.event_time))}</td><td>${escapeHtml(m.out_event.checkpoint_name)}</td><td>${escapeHtml(plateIn)}</td><td>${escapeHtml(plateOut)}</td><td>${escapeHtml(m.distance_miles)}</td>
           <td>${escapeHtml(m.elapsed_minutes)}</td><td>${escapeHtml(m.expected_minutes)}</td><td>${escapeHtml(formatWholeSpeed(m.avg_speed_mph))} mph</td><td>${escapeHtml(m.confidence)}</td><td>${escapeHtml(scoreDetail)}</td><td>${escapeHtml(vehicleIn)}</td><td>${escapeHtml(vehicleOut)}</td>`;
-        matchBody.appendChild(tr);
+        tbody.appendChild(tr);
       }
+      table.appendChild(tbody);
+      body.appendChild(table);
+      section.appendChild(body);
+      matchesSections.appendChild(section);
     }
   }
 
   arrivals.innerHTML = '';
   const arrivalsData = data.unmatched_in || [];
   const depData = data.unmatched_out || [];
+  if (arrivalsSummary) arrivalsSummary.textContent = `Local Arrivals (In only) (${arrivalsData.length})`;
+  if (departuresSummary) departuresSummary.textContent = `Local Departures (Out only) (${depData.length})`;
 
+  if (arrivalsData.length === 0) {
+    arrivals.innerHTML = '<tr><td colspan="4">No local arrivals in this period.</td></tr>';
+  }
   for (const e of arrivalsData) {
     const tr = document.createElement('tr');
     tr.innerHTML = `<td>${escapeHtml(formatEtDateTime(e.event_time))}</td><td>${escapeHtml(e.checkpoint_name)}</td><td>${escapeHtml(e.plate_raw || '')}</td><td>${escapeHtml(e.vehicle_type)} / ${escapeHtml(e.vehicle_color)}</td>`;
@@ -252,6 +280,9 @@ async function loadDetails() {
   }
 
   dep.innerHTML = '';
+  if (depData.length === 0) {
+    dep.innerHTML = '<tr><td colspan="4">No local departures in this period.</td></tr>';
+  }
   for (const e of depData) {
     const tr = document.createElement('tr');
     tr.innerHTML = `<td>${escapeHtml(formatEtDateTime(e.event_time))}</td><td>${escapeHtml(e.checkpoint_name)}</td><td>${escapeHtml(e.plate_raw || '')}</td><td>${escapeHtml(e.vehicle_type)} / ${escapeHtml(e.vehicle_color)}</td>`;

@@ -120,6 +120,47 @@ table { width: 100%; border-collapse: collapse; margin-top: 0.5rem; background: 
 th, td { border: 1px solid var(--line); padding: 0.48rem; text-align: left; font-size: 0.9rem; }
 th { background: #f3f6fb; }
 
+.section-collapse {
+  border: 1px solid #cfd8ea;
+  border-radius: 10px;
+  margin-top: 0.6rem;
+  background: #ffffff;
+  overflow: hidden;
+}
+
+.section-collapse > summary {
+  list-style: none;
+  cursor: pointer;
+  user-select: none;
+  padding: 0.62rem 0.72rem;
+  font-size: 0.93rem;
+  font-weight: 700;
+  line-height: 1.25;
+  background: #eef2ff;
+  color: #0f172a;
+}
+
+.section-collapse > summary::-webkit-details-marker {
+  display: none;
+}
+
+.section-collapse > summary::before {
+  content: '+ ';
+  font-weight: 800;
+}
+
+.section-collapse[open] > summary::before {
+  content: '- ';
+}
+
+.section-collapse-body {
+  padding: 0.35rem 0.5rem 0.5rem;
+}
+
+.section-collapse-body table {
+  margin-top: 0.25rem;
+}
+
 .pair-chart {
   display: grid;
   gap: 0.55rem;
