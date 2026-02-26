@@ -44,7 +44,7 @@ render_head('Dashboard');
   <?php endif; ?>
 </section>
 
-<section class="grid three" style="margin-top:1rem;" id="kpis"></section>
+<section style="margin-top:1rem;" id="kpis"></section>
 
 <section class="card" style="margin-top:1rem;">
   <h2>Cut-Through by Checkpoint Pair</h2>
@@ -98,6 +98,13 @@ function currentStudyPeriod() {
 
 function kpiCard(label, value, css='') {
   return `<article class="card"><div class="kpi ${css}">${value}</div><div class="kpi-label">${label}</div></article>`;
+}
+
+function kpiRow(title, cards) {
+  return `<section style="margin-bottom:1rem;">
+    <div class="small" style="font-weight:700; margin-bottom:0.4rem;">${escapeHtml(title)}</div>
+    <div class="grid three">${cards.join('')}</div>
+  </section>`;
 }
 
 function escapeHtml(value) {
@@ -701,19 +708,35 @@ async function loadDashboard() {
   const pairCounts = pairCountsByRoute(json.matches || [], totalVolume);
   const topPair = pairCounts[0] || null;
 
-  document.getElementById('kpis').innerHTML = [
+  const dateCards = [
     kpiCard('Study Date', studyDate),
     kpiCard('Start Time (First Entry)', startTime),
     kpiCard('End Time (Last Entry)', endTime),
+  ];
+  const countCards = [
     kpiCard('Highest Checkpoint Two-Way', highestCheckpointTwoWay),
-    kpiCard('Vehicles Per Hour', `${vehiclesPerHour} veh/hr`),
     kpiCard('Cut-Through Vehicles', summary.cut_through_count),
-    kpiCard('Top Leg % (Of Total)', topPair ? topPair.percent_label : '0.00%'),
-    kpiCard('Top Leg Avg Speed', topPair ? topPair.avg_speed_label : '0.00 mph'),
-    kpiCard('Avg Match Confidence', `${avgMatchConfidence}%`),
-    kpiCard('Policy Status', policyStatus, policyClass),
     kpiCard('Local Arrivals (In only)', summary.local_arrivals_count),
     kpiCard('Local Departures (Out only)', summary.local_departures_count),
+  ];
+  const speedCards = [
+    kpiCard('Vehicles Per Hour', `${vehiclesPerHour} veh/hr`),
+    kpiCard('Top Leg Avg Speed', topPair ? topPair.avg_speed_label : '0.00 mph'),
+    kpiCard('Top Leg % (Of Total)', topPair ? topPair.percent_label : '0.00%'),
+  ];
+  const avgMatchCards = [
+    kpiCard('Avg Match Confidence', `${avgMatchConfidence}%`),
+  ];
+  const policyCards = [
+    kpiCard('Policy Status', policyStatus, policyClass),
+  ];
+
+  document.getElementById('kpis').innerHTML = [
+    kpiRow('Dates', dateCards),
+    kpiRow('Counts', countCards),
+    kpiRow('Speeds', speedCards),
+    kpiRow('Avg Match', avgMatchCards),
+    kpiRow('Policy', policyCards),
   ].join('');
   renderPairChart(json.matches || [], totalVolume);
 
