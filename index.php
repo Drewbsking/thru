@@ -16,6 +16,7 @@ render_head('Home');
     <a class="btn secondary" href="details.php">N-CAT Cut-Through Details</a>
     <a class="btn secondary" href="downloads.php">Downloads</a>
     <?php if (is_admin()): ?>
+      <a class="btn secondary" href="admin.php">N-CAT Admin</a>
       <a class="btn secondary" href="setup.php">N-CAT Site Setup</a>
     <?php endif; ?>
   </div>

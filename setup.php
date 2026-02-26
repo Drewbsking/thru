@@ -14,24 +14,8 @@ $setupCsrfToken = csrf_token();
 </section>
 
 <section class="card" style="margin-top:1rem;">
-  <h2>Collectors + Checkpoint Access</h2>
+  <h2>Checkpoint Access Assignments</h2>
   <div class="grid two">
-    <article>
-      <h3>Create Collector Login</h3>
-      <form id="collectorForm">
-        <div class="form-row">
-          <div><label>Username</label><input id="collector_username" placeholder="jane.doe" required></div>
-          <div><label>Password</label><input id="collector_password" type="password" minlength="10" required></div>
-          <div><label>Confirm Password</label><input id="collector_password_confirm" type="password" minlength="10" required></div>
-        </div>
-        <button type="submit">Create Collector</button>
-      </form>
-      <p id="collectorStatus" class="status small"></p>
-      <table>
-        <thead><tr><th>Collector Username</th><th>Role</th></tr></thead>
-        <tbody id="collectorBody"></tbody>
-      </table>
-    </article>
     <article>
       <h3>Assign Collector to Checkpoint</h3>
       <form id="assignmentForm">
@@ -46,6 +30,14 @@ $setupCsrfToken = csrf_token();
       <table>
         <thead><tr><th>Collector</th><th>Site</th><th>Checkpoint</th><th>Action</th></tr></thead>
         <tbody id="assignmentBody"></tbody>
+      </table>
+    </article>
+    <article>
+      <h3>Available Collectors</h3>
+      <p class="small">Create or manage collector logins on the <a href="admin.php">Admin page</a>.</p>
+      <table>
+        <thead><tr><th>Collector Username</th><th>Role</th></tr></thead>
+        <tbody id="collectorBody"></tbody>
       </table>
     </article>
   </div>
@@ -68,29 +60,6 @@ $setupCsrfToken = csrf_token();
       </div>
       <button type="submit">Save Settings</button>
       <p id="settingsStatus" class="status small"></p>
-    </form>
-
-    <hr style="margin:1rem 0; border:0; border-top:1px solid #d8dde7;">
-    <h3>Admin Password</h3>
-    <form id="passwordForm">
-      <div class="form-row">
-        <div><label>New Password (Current Admin)</label><input id="new_password" type="password" minlength="10" required></div>
-        <div><label>Confirm New Password</label><input id="confirm_new_password" type="password" minlength="10" required></div>
-      </div>
-      <button type="submit" class="secondary">Update Admin Password</button>
-      <p id="passwordStatus" class="status small"></p>
-    </form>
-
-    <hr style="margin:1rem 0; border:0; border-top:1px solid #d8dde7;">
-    <h3>Dashboard Viewer Access Code</h3>
-    <p class="small" id="viewerCodeEnabled">Viewer access is currently disabled.</p>
-    <form id="viewerCodeForm">
-      <div class="form-row">
-        <div><label>New Access Code</label><input id="viewer_access_code" type="password" minlength="8" required></div>
-        <div><label>Confirm Access Code</label><input id="viewer_access_code_confirm" type="password" minlength="8" required></div>
-      </div>
-      <button type="submit" class="secondary">Update Viewer Code</button>
-      <p id="viewerCodeStatus" class="status small"></p>
     </form>
   </article>
 
@@ -230,12 +199,6 @@ function renderSettings() {
   const s = context.settings;
   for (const k of ['speed_mph','buffer_minutes','min_confidence','poll_seconds','policy_cut_through_percent']) {
     document.getElementById(k).value = s[k];
-  }
-  const viewerStatus = document.getElementById('viewerCodeEnabled');
-  if (viewerStatus) {
-    viewerStatus.textContent = s.dashboard_view_enabled
-      ? 'Viewer access is enabled. Share the access code (no username needed).'
-      : 'Viewer access is currently disabled.';
   }
 }
 
@@ -450,68 +413,6 @@ document.getElementById('settingsForm').addEventListener('submit', async (e) => 
   const out = await post('save_settings', payload);
   document.getElementById('settingsStatus').textContent = out.ok ? 'Settings saved. Dashboard recalculation uses these values immediately.' : out.error;
   document.getElementById('settingsStatus').className = out.ok ? 'status ok' : 'status warn';
-  await loadContext();
-});
-
-document.getElementById('passwordForm').addEventListener('submit', async (e) => {
-  e.preventDefault();
-  const newPassword = document.getElementById('new_password').value;
-  const confirmPassword = document.getElementById('confirm_new_password').value;
-  if (newPassword !== confirmPassword) {
-    document.getElementById('passwordStatus').textContent = 'Passwords do not match.';
-    document.getElementById('passwordStatus').className = 'status warn';
-    return;
-  }
-
-  const out = await post('save_auth_password', {
-    new_password: newPassword,
-    confirm_new_password: confirmPassword,
-  });
-  document.getElementById('passwordStatus').textContent = out.ok ? 'Password updated.' : out.error;
-  document.getElementById('passwordStatus').className = out.ok ? 'status ok' : 'status warn';
-  if (out.ok) {
-    document.getElementById('new_password').value = '';
-    document.getElementById('confirm_new_password').value = '';
-  }
-});
-
-document.getElementById('viewerCodeForm').addEventListener('submit', async (e) => {
-  e.preventDefault();
-  const accessCode = document.getElementById('viewer_access_code').value;
-  const confirmCode = document.getElementById('viewer_access_code_confirm').value;
-  if (accessCode !== confirmCode) {
-    document.getElementById('viewerCodeStatus').textContent = 'Access code values do not match.';
-    document.getElementById('viewerCodeStatus').className = 'status warn';
-    return;
-  }
-
-  const out = await post('save_viewer_access_code', {
-    viewer_access_code: accessCode,
-    viewer_access_code_confirm: confirmCode,
-  });
-  document.getElementById('viewerCodeStatus').textContent = out.ok ? 'Viewer access code updated.' : out.error;
-  document.getElementById('viewerCodeStatus').className = out.ok ? 'status ok' : 'status warn';
-  if (out.ok) {
-    document.getElementById('viewer_access_code').value = '';
-    document.getElementById('viewer_access_code_confirm').value = '';
-  }
-  await loadContext();
-});
-
-document.getElementById('collectorForm').addEventListener('submit', async (e) => {
-  e.preventDefault();
-  const out = await post('create_collector', {
-    username: document.getElementById('collector_username').value,
-    password: document.getElementById('collector_password').value,
-    confirm_password: document.getElementById('collector_password_confirm').value,
-  });
-  document.getElementById('collectorStatus').textContent = out.ok ? 'Collector created.' : out.error;
-  document.getElementById('collectorStatus').className = out.ok ? 'status ok' : 'status warn';
-  if (out.ok) {
-    document.getElementById('collector_username').value = '';
-    document.getElementById('collector_password').value = '';
-    document.getElementById('collector_password_confirm').value = '';
-  }
   await loadContext();
 });
 

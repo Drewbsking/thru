@@ -39,6 +39,7 @@ function render_head(string $title): void
             echo '<a href="details.php">Cut-Through Details</a>';
             echo '<a href="downloads.php">Downloads</a>';
             if (is_admin()) {
+                echo '<a href="admin.php">Admin</a>';
                 echo '<a href="setup.php">Site Setup</a>';
             }
         }
