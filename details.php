@@ -85,7 +85,7 @@ render_head('Cut-Through Details');
   <h2>Data Collection Details</h2>
   <p class="small">Complete list of raw recordings for the selected site and study period.</p>
   <details class="section-collapse">
-    <summary id="allEventsSummary">All Recordings (Chronological)</summary>
+    <summary id="allEventsSummary">All Recordings (Newest First)</summary>
     <div class="section-collapse-body">
       <table>
         <thead>
@@ -212,9 +212,18 @@ function groupEventsByLocation(events, checkpoints) {
   });
 }
 
+function compareDateStringsDesc(a, b) {
+  const aValue = String(a || '').trim();
+  const bValue = String(b || '').trim();
+  if (aValue === bValue) return 0;
+  if (aValue === '') return 1;
+  if (bValue === '') return -1;
+  return aValue < bValue ? 1 : -1;
+}
+
 function renderAllEvents(events, allEventsBody, allEventsSummary) {
   allEventsBody.innerHTML = '';
-  if (allEventsSummary) allEventsSummary.textContent = `All Recordings (Chronological) (${events.length})`;
+  if (allEventsSummary) allEventsSummary.textContent = `All Recordings (Newest First) (${events.length})`;
   if (events.length === 0) {
     allEventsBody.innerHTML = '<tr><td colspan="8">No recordings in this period.</td></tr>';
     return;
@@ -287,7 +296,7 @@ async function loadDetails() {
     if (arrivalsSummary) arrivalsSummary.textContent = 'Local Arrivals (In only) (0)';
     if (departuresSummary) departuresSummary.textContent = 'Local Departures (Out only) (0)';
     if (sessionCommentsSummary) sessionCommentsSummary.textContent = 'Session Observations (0)';
-    if (allEventsSummary) allEventsSummary.textContent = 'All Recordings (Chronological) (0)';
+    if (allEventsSummary) allEventsSummary.textContent = 'All Recordings (Newest First) (0)';
     if (byLocationSummary) byLocationSummary.textContent = 'Recordings by Location (0 checkpoints)';
     return;
   }
@@ -310,12 +319,15 @@ async function loadDetails() {
     if (arrivalsSummary) arrivalsSummary.textContent = 'Local Arrivals (In only) (0)';
     if (departuresSummary) departuresSummary.textContent = 'Local Departures (Out only) (0)';
     if (sessionCommentsSummary) sessionCommentsSummary.textContent = 'Session Observations (0)';
-    if (allEventsSummary) allEventsSummary.textContent = 'All Recordings (Chronological) (0)';
+    if (allEventsSummary) allEventsSummary.textContent = 'All Recordings (Newest First) (0)';
     if (byLocationSummary) byLocationSummary.textContent = 'Recordings by Location (0 checkpoints)';
     return;
   }
 
-  matchesCache = data.matches || [];
+  matchesCache = (data.matches || []).slice().sort((a, b) => compareDateStringsDesc(
+    a?.out_event?.event_time || a?.in_event?.event_time,
+    b?.out_event?.event_time || b?.in_event?.event_time
+  ));
 
   matchesSections.innerHTML = '';
   const routeGroups = groupMatchesByRoute(matchesCache);
@@ -359,8 +371,8 @@ async function loadDetails() {
   }
 
   arrivals.innerHTML = '';
-  const arrivalsData = data.unmatched_in || [];
-  const depData = data.unmatched_out || [];
+  const arrivalsData = (data.unmatched_in || []).slice().sort((a, b) => compareDateStringsDesc(a?.event_time, b?.event_time));
+  const depData = (data.unmatched_out || []).slice().sort((a, b) => compareDateStringsDesc(a?.event_time, b?.event_time));
   if (arrivalsSummary) arrivalsSummary.textContent = `Local Arrivals (In only) (${arrivalsData.length})`;
   if (departuresSummary) departuresSummary.textContent = `Local Departures (Out only) (${depData.length})`;
 
@@ -384,7 +396,7 @@ async function loadDetails() {
   }
 
   sessionCommentsBody.innerHTML = '';
-  const sessionComments = data.session_comments || [];
+  const sessionComments = (data.session_comments || []).slice().sort((a, b) => compareDateStringsDesc(a?.updated_at, b?.updated_at));
   if (sessionCommentsSummary) sessionCommentsSummary.textContent = `Session Observations (${sessionComments.length})`;
   if (sessionComments.length === 0) {
     sessionCommentsBody.innerHTML = '<tr><td colspan="5">No session observations in this period/date.</td></tr>';
@@ -400,7 +412,7 @@ async function loadDetails() {
     }
   }
 
-  const allEvents = data.all_events || [];
+  const allEvents = (data.all_events || []).slice().sort((a, b) => compareDateStringsDesc(a?.event_time, b?.event_time));
   renderAllEvents(allEvents, allEventsBody, allEventsSummary);
   renderEventsByLocation(allEvents, data.checkpoints || [], eventsByLocation, byLocationSummary);
 }

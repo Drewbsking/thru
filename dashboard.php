@@ -44,45 +44,72 @@ render_head('Dashboard');
   <?php endif; ?>
 </section>
 
-<section style="margin-top:1rem;" id="kpis"></section>
-
 <section class="card" style="margin-top:1rem;">
-  <h2>Cut-Through by Checkpoint Pair</h2>
-  <p class="small">Matched cut-through vehicles grouped by checkpoint direction pair.</p>
-  <p class="small" id="pairChartMeta">No pair data loaded yet.</p>
-  <div id="pairChart" class="pair-chart"></div>
+  <details class="section-collapse">
+    <summary id="kpisSummary">Key Metrics</summary>
+    <div class="section-collapse-body">
+      <section id="kpis"></section>
+    </div>
+  </details>
 </section>
 
 <section class="card" style="margin-top:1rem;">
-  <h2>Checkpoint Counts</h2>
-  <table>
-    <thead><tr><th>Checkpoint</th><th>In</th><th>Out</th><th>Total (Two-Way)</th></tr></thead>
-    <tbody id="checkpointBody"><tr><td colspan="4">Loading...</td></tr></tbody>
-  </table>
+  <details class="section-collapse">
+    <summary id="pairChartSummary">Cut-Through by Checkpoint Pair</summary>
+    <div class="section-collapse-body">
+      <p class="small">Matched cut-through vehicles grouped by checkpoint direction pair.</p>
+      <p class="small" id="pairChartMeta">No pair data loaded yet.</p>
+      <div id="pairChart" class="pair-chart"></div>
+    </div>
+  </details>
 </section>
 
 <section class="card" style="margin-top:1rem;">
-  <h2>Cut-Through Matches</h2>
-  <table>
-    <thead><tr><th>In Event #</th><th>Out Event #</th><th>Elapsed</th><th>Expected</th><th>Avg Speed</th><th>Confidence</th></tr></thead>
-    <tbody id="matchBody"><tr><td colspan="6">Loading...</td></tr></tbody>
-  </table>
+  <details class="section-collapse">
+    <summary id="checkpointSummary">Checkpoint Counts</summary>
+    <div class="section-collapse-body">
+      <table>
+        <thead><tr><th>Checkpoint</th><th>In</th><th>Out</th><th>Total (Two-Way)</th></tr></thead>
+        <tbody id="checkpointBody"><tr><td colspan="4">Loading...</td></tr></tbody>
+      </table>
+    </div>
+  </details>
 </section>
 
 <section class="card" style="margin-top:1rem;">
-  <h2>Session Observations</h2>
-  <table>
-    <thead><tr><th>Checkpoint</th><th>Collector</th><th>Period</th><th>Last Updated (ET)</th><th>Observation Comment</th></tr></thead>
-    <tbody id="sessionCommentsBody"><tr><td colspan="5">Loading...</td></tr></tbody>
-  </table>
+  <details class="section-collapse">
+    <summary id="matchSummary">Cut-Through Matches</summary>
+    <div class="section-collapse-body">
+      <table>
+        <thead><tr><th>In Event #</th><th>Out Event #</th><th>Elapsed</th><th>Expected</th><th>Avg Speed</th><th>Confidence</th></tr></thead>
+        <tbody id="matchBody"><tr><td colspan="6">Loading...</td></tr></tbody>
+      </table>
+    </div>
+  </details>
 </section>
 
 <section class="card" style="margin-top:1rem;">
-  <h2>Recent Events</h2>
-  <table>
-    <thead><tr><th>Event #</th><th>Time</th><th>Checkpoint</th><th>Dir</th><th>Plate</th><th>Type</th><th>Color</th><th>Observer</th></tr></thead>
-    <tbody id="recentBody"><tr><td colspan="8">Loading...</td></tr></tbody>
-  </table>
+  <details class="section-collapse">
+    <summary id="sessionCommentsSummary">Session Observations</summary>
+    <div class="section-collapse-body">
+      <table>
+        <thead><tr><th>Checkpoint</th><th>Collector</th><th>Period</th><th>Last Updated (ET)</th><th>Observation Comment</th></tr></thead>
+        <tbody id="sessionCommentsBody"><tr><td colspan="5">Loading...</td></tr></tbody>
+      </table>
+    </div>
+  </details>
+</section>
+
+<section class="card" style="margin-top:1rem;">
+  <details class="section-collapse">
+    <summary id="recentSummary">Recent Events</summary>
+    <div class="section-collapse-body">
+      <table>
+        <thead><tr><th>Event #</th><th>Time</th><th>Checkpoint</th><th>Dir</th><th>Plate</th><th>Type</th><th>Color</th><th>Observer</th></tr></thead>
+        <tbody id="recentBody"><tr><td colspan="8">Loading...</td></tr></tbody>
+      </table>
+    </div>
+  </details>
 </section>
 
 <script>
@@ -740,6 +767,10 @@ async function loadDashboard() {
   )).toFixed(2);
   const pairCounts = pairCountsByRoute(json.matches || [], totalVolume);
   const topPair = pairCounts[0] || null;
+  const pairChartSummary = document.getElementById('pairChartSummary');
+  if (pairChartSummary) pairChartSummary.textContent = `Cut-Through by Checkpoint Pair (${pairCounts.length})`;
+  const matchSummary = document.getElementById('matchSummary');
+  if (matchSummary) matchSummary.textContent = `Cut-Through Matches (${(json.matches || []).length})`;
 
   const dateCards = [
     kpiCard('Study Date', studyDate),
@@ -776,6 +807,9 @@ async function loadDashboard() {
   const cpBody = document.getElementById('checkpointBody');
   cpBody.innerHTML = '';
   const cpEntries = Object.entries(json.checkpoint_counts || {});
+  const checkpointSummary = document.getElementById('checkpointSummary');
+  const checkpointCount = (json.checkpoints || []).length > 0 ? (json.checkpoints || []).length : cpEntries.length;
+  if (checkpointSummary) checkpointSummary.textContent = `Checkpoint Counts (${checkpointCount})`;
   if (cpEntries.length === 0) {
     cpBody.innerHTML = '<tr><td colspan="4">No events in this study period/date.</td></tr>';
   } else {
@@ -817,6 +851,8 @@ async function loadDashboard() {
   const sessionCommentsBody = document.getElementById('sessionCommentsBody');
   sessionCommentsBody.innerHTML = '';
   const sessionComments = json.session_comments || [];
+  const sessionCommentsSummary = document.getElementById('sessionCommentsSummary');
+  if (sessionCommentsSummary) sessionCommentsSummary.textContent = `Session Observations (${sessionComments.length})`;
   if (!sessionComments.length) {
     sessionCommentsBody.innerHTML = '<tr><td colspan="5">No session observations for this period/date.</td></tr>';
   } else {
@@ -833,10 +869,13 @@ async function loadDashboard() {
 
   const recentBody = document.getElementById('recentBody');
   recentBody.innerHTML = '';
-  if (!(json.recent_events || []).length) {
+  const recentEvents = json.recent_events || [];
+  const recentSummary = document.getElementById('recentSummary');
+  if (recentSummary) recentSummary.textContent = `Recent Events (${recentEvents.length})`;
+  if (!recentEvents.length) {
     recentBody.innerHTML = '<tr><td colspan="8">No recent events in this study period/date.</td></tr>';
   } else {
-    json.recent_events.forEach(e => {
+    recentEvents.forEach(e => {
       const tr = document.createElement('tr');
       tr.innerHTML = `<td>${escapeHtml(e.id)}</td><td>${escapeHtml(formatEtDateTime(e.event_time))}</td><td>${escapeHtml(e.checkpoint_name)}</td><td>${escapeHtml(e.direction)}</td><td>${escapeHtml(e.plate_raw || '')}</td><td>${escapeHtml(e.vehicle_type)}</td><td>${escapeHtml(e.vehicle_color)}</td><td>${escapeHtml(e.observer_name || '')}</td>`;
       recentBody.appendChild(tr);
