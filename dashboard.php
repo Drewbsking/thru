@@ -121,6 +121,9 @@ const downloadReportBtn = null;
 const studyPeriodSelect = document.getElementById('study_period');
 let autoDownloadReport = false;
 let reportBusy = false;
+let seenRecentEventKeys = new Set();
+let hasRecentBaseline = false;
+const recentRowHighlightMs = 1200;
 
 function currentStudyPeriod() {
   const hourEt = Number(new Intl.DateTimeFormat('en-US', {
@@ -261,6 +264,18 @@ function formatStudyPeriodLabel(period) {
 
 function commentCellHtml(value) {
   return escapeHtml(String(value ?? '')).replace(/\n/g, '<br>');
+}
+
+function recentEventKey(event) {
+  const idValue = String(event?.id ?? '').trim();
+  if (idValue !== '') {
+    return `id:${idValue}`;
+  }
+  const eventTime = String(event?.event_time ?? '').trim();
+  const checkpointName = String(event?.checkpoint_name ?? '').trim();
+  const direction = String(event?.direction ?? '').trim();
+  const plateRaw = String(event?.plate_raw ?? '').trim();
+  return `fallback:${eventTime}|${checkpointName}|${direction}|${plateRaw}`;
 }
 
 function formatEtDateOnly(ymd) {
@@ -872,15 +887,25 @@ async function loadDashboard() {
   const recentEvents = json.recent_events || [];
   const recentSummary = document.getElementById('recentSummary');
   if (recentSummary) recentSummary.textContent = `Recent Events (${recentEvents.length})`;
+  const incomingRecentEventKeys = new Set();
   if (!recentEvents.length) {
     recentBody.innerHTML = '<tr><td colspan="8">No recent events in this study period/date.</td></tr>';
   } else {
     recentEvents.forEach(e => {
+      const eventKey = recentEventKey(e);
+      incomingRecentEventKeys.add(eventKey);
+      const isNewRow = hasRecentBaseline && !seenRecentEventKeys.has(eventKey);
       const tr = document.createElement('tr');
+      if (isNewRow) {
+        tr.classList.add('recent-row-new');
+        setTimeout(() => tr.classList.remove('recent-row-new'), recentRowHighlightMs + 50);
+      }
       tr.innerHTML = `<td>${escapeHtml(e.id)}</td><td>${escapeHtml(formatEtDateTime(e.event_time))}</td><td>${escapeHtml(e.checkpoint_name)}</td><td>${escapeHtml(e.direction)}</td><td>${escapeHtml(e.plate_raw || '')}</td><td>${escapeHtml(e.vehicle_type)}</td><td>${escapeHtml(e.vehicle_color)}</td><td>${escapeHtml(e.observer_name || '')}</td>`;
       recentBody.appendChild(tr);
     });
   }
+  seenRecentEventKeys = incomingRecentEventKeys;
+  hasRecentBaseline = true;
 
   if (autoDownloadReport) {
     autoDownloadReport = false;
