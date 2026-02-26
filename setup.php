@@ -14,85 +14,71 @@ $setupCsrfToken = csrf_token();
 </section>
 
 <section class="card" style="margin-top:1rem;">
-  <h2>Checkpoint Access Assignments</h2>
-  <div class="grid two">
-    <article>
-      <h3>Assign Collector to Checkpoint</h3>
-      <form id="assignmentForm">
-        <div class="form-row">
-          <div><label>Collector</label><select id="assign_user_id"></select></div>
-          <div><label>Site</label><select id="assign_site_id"></select></div>
-          <div><label>Checkpoint</label><select id="assign_checkpoint_id"></select></div>
-        </div>
-        <button type="submit">Save Assignment</button>
-      </form>
-      <p id="assignmentStatus" class="status small"></p>
-      <table>
-        <thead><tr><th>Collector</th><th>Site</th><th>Checkpoint</th><th>Action</th></tr></thead>
-        <tbody id="assignmentBody"></tbody>
-      </table>
-    </article>
-    <article>
-      <h3>Available Collectors</h3>
-      <p class="small">Create or manage collector logins on the <a href="admin.php">Admin page</a>.</p>
-      <table>
-        <thead><tr><th>Collector Username</th><th>Role</th></tr></thead>
-        <tbody id="collectorBody"></tbody>
-      </table>
-    </article>
+  <h2>Site + Image</h2>
+  <div class="form-row">
+    <div>
+      <label>Site</label>
+      <select id="sitePicker"></select>
+    </div>
+    <div>
+      <label>Set Active Site</label>
+      <button type="button" id="activeBtn">Set Active</button>
+    </div>
   </div>
+  <form id="newSiteForm" class="form-row">
+    <div>
+      <label>New Site Name</label>
+      <input id="site_name" placeholder="North Study Area">
+    </div>
+    <div>
+      <label>&nbsp;</label>
+      <button type="submit" class="secondary">Create Site</button>
+    </div>
+  </form>
+  <form id="imageForm" enctype="multipart/form-data">
+    <label>Site Image (PNG/JPG/WEBP)</label>
+    <input id="site_image" type="file" accept="image/png,image/jpeg,image/webp">
+    <div class="actions"><button type="submit">Upload Image</button></div>
+  </form>
+  <p id="siteStatus" class="status small"></p>
+  <img id="sitePreview" class="site-preview" alt="Site image preview">
 </section>
 
-<section class="grid two" style="margin-top:1rem;">
-  <article class="card">
-    <h2>Global Matching Settings</h2>
-    <form id="settingsForm">
-      <div class="form-row">
-        <div><label>Speed (mph)</label><input id="speed_mph" type="number" min="1" max="120" step="1"></div>
-        <div><label>Buffer (minutes)</label><input id="buffer_minutes" type="number" min="0.1" max="20" step="0.1"></div>
-      </div>
-      <div class="form-row">
-        <div><label>Min Confidence (50-100)</label><input id="min_confidence" type="number" min="50" max="100" step="1"></div>
-        <div><label>Dashboard Poll (sec)</label><input id="poll_seconds" type="number" min="5" max="60" step="1"></div>
-      </div>
-      <div class="form-row">
-        <div><label>Policy Cut-Through %</label><input id="policy_cut_through_percent" type="number" min="1" max="100" step="1"></div>
-      </div>
-      <button type="submit">Save Settings</button>
-      <p id="settingsStatus" class="status small"></p>
-    </form>
-  </article>
-
-  <article class="card">
-    <h2>Site + Image</h2>
+<section class="card" style="margin-top:1rem;">
+  <h2>Checkpoint Access Assignments</h2>
+  <p class="small">Collectors are managed on the <a href="admin.php">Admin page</a>.</p>
+  <form id="assignmentForm">
     <div class="form-row">
-      <div>
-        <label>Site</label>
-        <select id="sitePicker"></select>
-      </div>
-      <div>
-        <label>Set Active Site</label>
-        <button type="button" id="activeBtn">Set Active</button>
-      </div>
+      <div><label>Collector</label><select id="assign_user_id"></select></div>
+      <div><label>Site</label><select id="assign_site_id"></select></div>
+      <div><label>Checkpoint</label><select id="assign_checkpoint_id"></select></div>
     </div>
-    <form id="newSiteForm" class="form-row">
-      <div>
-        <label>New Site Name</label>
-        <input id="site_name" placeholder="North Study Area">
-      </div>
-      <div>
-        <label>&nbsp;</label>
-        <button type="submit" class="secondary">Create Site</button>
-      </div>
-    </form>
-    <form id="imageForm" enctype="multipart/form-data">
-      <label>Site Image (PNG/JPG/WEBP)</label>
-      <input id="site_image" type="file" accept="image/png,image/jpeg,image/webp">
-      <div class="actions"><button type="submit">Upload Image</button></div>
-    </form>
-    <p id="siteStatus" class="status small"></p>
-    <img id="sitePreview" class="site-preview" alt="Site image preview">
-  </article>
+    <button type="submit">Save Assignment</button>
+  </form>
+  <p id="assignmentStatus" class="status small"></p>
+  <table>
+    <thead><tr><th>Collector</th><th>Site</th><th>Checkpoint</th><th>Action</th></tr></thead>
+    <tbody id="assignmentBody"></tbody>
+  </table>
+</section>
+
+<section class="card" style="margin-top:1rem;">
+  <h2>Global Matching Settings</h2>
+  <form id="settingsForm">
+    <div class="form-row">
+      <div><label>Speed Limit (mph)</label><input id="speed_mph" type="number" min="1" max="120" step="1"></div>
+      <div><label>Buffer (minutes)</label><input id="buffer_minutes" type="number" min="0.1" max="20" step="0.1"></div>
+    </div>
+    <div class="form-row">
+      <div><label>Min Confidence (50-100)</label><input id="min_confidence" type="number" min="50" max="100" step="1"></div>
+      <div><label>Dashboard Poll (sec)</label><input id="poll_seconds" type="number" min="5" max="60" step="1"></div>
+    </div>
+    <div class="form-row">
+      <div><label>Policy Cut-Through %</label><input id="policy_cut_through_percent" type="number" min="1" max="100" step="1"></div>
+    </div>
+    <button type="submit">Save Settings</button>
+    <p id="settingsStatus" class="status small"></p>
+  </form>
 </section>
 
 <section class="grid two" style="margin-top:1rem;">
@@ -119,7 +105,7 @@ $setupCsrfToken = csrf_token();
     <p class="small">Checkpoint combinations are auto-generated. Enter miles and save each pair.</p>
     <p id="distanceStatus" class="status small"></p>
     <table>
-      <thead><tr><th>From</th><th>To</th><th>Miles</th><th>Expected @ Speed</th><th>Action</th></tr></thead>
+      <thead><tr><th>From</th><th>To</th><th>Miles</th><th>Expected @ Speed Limit</th><th>Action</th></tr></thead>
       <tbody id="distanceBody"></tbody>
     </table>
   </article>
@@ -320,22 +306,21 @@ document.getElementById('distanceBody').addEventListener('click', async (e) => {
 
 function renderCollectorsAndAssignments() {
   const collectors = (context.users || []).filter(u => u.role === 'collector' && Number(u.is_active) === 1);
-  const collectorBody = document.getElementById('collectorBody');
-  collectorBody.innerHTML = '';
-  collectors.forEach(u => {
-    const tr = document.createElement('tr');
-    tr.innerHTML = `<td>${escapeHtml(u.username)}</td><td>${escapeHtml(u.role)}</td>`;
-    collectorBody.appendChild(tr);
-  });
-
   const assignUser = document.getElementById('assign_user_id');
   assignUser.innerHTML = '';
-  collectors.forEach(u => {
+  if (collectors.length === 0) {
     const opt = document.createElement('option');
-    opt.value = u.id;
-    opt.textContent = u.username;
+    opt.value = '';
+    opt.textContent = 'No collectors available';
     assignUser.appendChild(opt);
-  });
+  } else {
+    collectors.forEach(u => {
+      const opt = document.createElement('option');
+      opt.value = u.id;
+      opt.textContent = u.username;
+      assignUser.appendChild(opt);
+    });
+  }
 
   const assignSite = document.getElementById('assign_site_id');
   const currentSiteValue = assignSite.value;
@@ -358,6 +343,9 @@ function renderCollectorsAndAssignments() {
     tr.innerHTML = `<td>${escapeHtml(a.username)}</td><td>${escapeHtml(a.site_name)}</td><td>${escapeHtml(a.checkpoint_name)} (${escapeHtml(a.checkpoint_code)})</td><td><button type="button" class="warn" data-del-assignment="${a.id}">Remove</button></td>`;
     assignmentBody.appendChild(tr);
   });
+  if ((context.assignments || []).length === 0) {
+    assignmentBody.innerHTML = '<tr><td colspan="4">No collector assignments yet.</td></tr>';
+  }
 }
 
 function renderAssignmentCheckpointOptions() {
@@ -365,7 +353,15 @@ function renderAssignmentCheckpointOptions() {
   const site = (context.sites || []).find(s => Number(s.id) === siteId);
   const assignCheckpoint = document.getElementById('assign_checkpoint_id');
   assignCheckpoint.innerHTML = '';
-  (site?.checkpoints || []).forEach(cp => {
+  const checkpoints = site?.checkpoints || [];
+  if (checkpoints.length === 0) {
+    const opt = document.createElement('option');
+    opt.value = '';
+    opt.textContent = 'No checkpoints available';
+    assignCheckpoint.appendChild(opt);
+    return;
+  }
+  checkpoints.forEach(cp => {
     const opt = document.createElement('option');
     opt.value = cp.id;
     opt.textContent = `${cp.display_name} (${cp.checkpoint_code})`;
@@ -420,10 +416,18 @@ document.getElementById('assign_site_id').addEventListener('change', renderAssig
 
 document.getElementById('assignmentForm').addEventListener('submit', async (e) => {
   e.preventDefault();
+  const userId = String(document.getElementById('assign_user_id').value || '').trim();
+  const siteId = String(document.getElementById('assign_site_id').value || '').trim();
+  const checkpointId = String(document.getElementById('assign_checkpoint_id').value || '').trim();
+  if (!userId || !siteId || !checkpointId) {
+    document.getElementById('assignmentStatus').textContent = 'Select a collector, site, and checkpoint first.';
+    document.getElementById('assignmentStatus').className = 'status warn';
+    return;
+  }
   const out = await post('assign_collector_checkpoint', {
-    user_id: document.getElementById('assign_user_id').value,
-    site_id: document.getElementById('assign_site_id').value,
-    checkpoint_id: document.getElementById('assign_checkpoint_id').value,
+    user_id: userId,
+    site_id: siteId,
+    checkpoint_id: checkpointId,
   });
   document.getElementById('assignmentStatus').textContent = out.ok ? 'Assignment saved.' : out.error;
   document.getElementById('assignmentStatus').className = out.ok ? 'status ok' : 'status warn';
