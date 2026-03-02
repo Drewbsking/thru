@@ -172,6 +172,91 @@ function classify_events(array $events, array $distanceMap, float $speedMph, flo
     ];
 }
 
+function analyze_non_cut_through_in_out_pairs(array $inEvents, array $outEvents, array $distanceMap, float $speedMph, float $bufferMinutes, int $minConfidence): array
+{
+    $candidates = [];
+    foreach ($inEvents as $in) {
+        foreach ($outEvents as $out) {
+            $elapsed = (strtotime((string)($out['event_time'] ?? '')) - strtotime((string)($in['event_time'] ?? ''))) / 60;
+            if ($elapsed <= 0) {
+                continue;
+            }
+
+            $sameCheckpoint = (int)($in['checkpoint_id'] ?? 0) === (int)($out['checkpoint_id'] ?? 0);
+            $category = '';
+            if ($sameCheckpoint) {
+                $category = 'same_checkpoint';
+            } else {
+                $distKey = ((string)($in['checkpoint_id'] ?? '')) . ':' . ((string)($out['checkpoint_id'] ?? ''));
+                if (!isset($distanceMap[$distKey])) {
+                    continue;
+                }
+                $expected = expected_minutes((float)$distanceMap[$distKey], $speedMph);
+                $low = max(0.0, $expected - $bufferMinutes);
+                $high = $expected + $bufferMinutes;
+                if ($elapsed >= $low && $elapsed <= $high) {
+                    continue;
+                }
+                $category = 'different_checkpoint_outside_window';
+            }
+
+            $scoreParts = compute_match_components($in, $out);
+            $candidates[] = [
+                'in_id' => (int)($in['id'] ?? 0),
+                'out_id' => (int)($out['id'] ?? 0),
+                'category' => $category,
+                'elapsed_minutes' => round($elapsed, 2),
+                'confidence' => (int)($scoreParts['confidence'] ?? 0),
+                'plate_score' => (int)($scoreParts['plate_score'] ?? 0),
+                'type_score' => (int)($scoreParts['type_score'] ?? 0),
+                'color_score' => (int)($scoreParts['color_score'] ?? 0),
+            ];
+        }
+    }
+
+    usort($candidates, static function (array $a, array $b): int {
+        if ((int)$a['confidence'] !== (int)$b['confidence']) {
+            return (int)$b['confidence'] <=> (int)$a['confidence'];
+        }
+        if ((int)$a['plate_score'] !== (int)$b['plate_score']) {
+            return (int)$b['plate_score'] <=> (int)$a['plate_score'];
+        }
+        $aSupport = (int)$a['type_score'] + (int)$a['color_score'];
+        $bSupport = (int)$b['type_score'] + (int)$b['color_score'];
+        if ($aSupport !== $bSupport) {
+            return $bSupport <=> $aSupport;
+        }
+        return (float)$a['elapsed_minutes'] <=> (float)$b['elapsed_minutes'];
+    });
+
+    $usedIn = [];
+    $usedOut = [];
+    $sameCheckpointCount = 0;
+    $differentCheckpointOutsideWindowCount = 0;
+    foreach ($candidates as $candidate) {
+        if ((int)$candidate['confidence'] < $minConfidence) {
+            continue;
+        }
+        $inId = (int)($candidate['in_id'] ?? 0);
+        $outId = (int)($candidate['out_id'] ?? 0);
+        if ($inId <= 0 || $outId <= 0 || isset($usedIn[$inId]) || isset($usedOut[$outId])) {
+            continue;
+        }
+        $usedIn[$inId] = true;
+        $usedOut[$outId] = true;
+        if (($candidate['category'] ?? '') === 'same_checkpoint') {
+            $sameCheckpointCount++;
+        } elseif (($candidate['category'] ?? '') === 'different_checkpoint_outside_window') {
+            $differentCheckpointOutsideWindowCount++;
+        }
+    }
+
+    return [
+        'same_checkpoint_count' => $sameCheckpointCount,
+        'different_checkpoint_outside_window_count' => $differentCheckpointOutsideWindowCount,
+    ];
+}
+
 function match_first_non_empty_string(array $values): string
 {
     foreach ($values as $value) {

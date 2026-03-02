@@ -39,6 +39,8 @@ $distanceMap = distance_map_for_site($siteId);
 $morningAnalysis = classify_events($morningEvents, $distanceMap, $speedMph, $bufferMinutes, $minConfidence);
 $afternoonAnalysis = classify_events($afternoonEvents, $distanceMap, $speedMph, $bufferMinutes, $minConfidence);
 $repeatAnalysis = analyze_repeat_cut_throughs($morningAnalysis['matches'] ?? [], $afternoonAnalysis['matches'] ?? [], $minConfidence);
+$morningNonCutThrough = analyze_non_cut_through_in_out_pairs($morningAnalysis['unmatched_in'] ?? [], $morningAnalysis['unmatched_out'] ?? [], $distanceMap, $speedMph, $bufferMinutes, $minConfidence);
+$afternoonNonCutThrough = analyze_non_cut_through_in_out_pairs($afternoonAnalysis['unmatched_in'] ?? [], $afternoonAnalysis['unmatched_out'] ?? [], $distanceMap, $speedMph, $bufferMinutes, $minConfidence);
 
 $plateCounts = [];
 foreach ($allEvents as $event) {
@@ -69,6 +71,8 @@ json_response([
         'afternoon_unique_cut_through_vehicle_count' => (int)($repeatAnalysis['afternoon_unique_cut_through_vehicle_count'] ?? 0),
         'skipped_incomplete_match_count' => (int)($repeatAnalysis['skipped_incomplete_match_count'] ?? 0),
         'all_data_plate_4x_count' => $allDataPlate4xCount,
+        'same_checkpoint_in_out_count' => (int)($morningNonCutThrough['same_checkpoint_count'] ?? 0) + (int)($afternoonNonCutThrough['same_checkpoint_count'] ?? 0),
+        'different_checkpoint_outside_window_count' => (int)($morningNonCutThrough['different_checkpoint_outside_window_count'] ?? 0) + (int)($afternoonNonCutThrough['different_checkpoint_outside_window_count'] ?? 0),
     ],
     'rows' => array_values($repeatAnalysis['repeat_vehicle_rows'] ?? []),
 ]);
