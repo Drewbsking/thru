@@ -160,6 +160,18 @@ function formatEtDateTime(value, longMonth = false) {
   return `${monthName} ${day}, ${year}, ${hour12}:${minute} ${ampm} ET`;
 }
 
+function formatEtTimeOnly(value) {
+  const raw = String(value || '').trim();
+  if (!raw) return '--';
+  const m = raw.match(/^(\d{4})-(\d{2})-(\d{2})[ T](\d{2}):(\d{2})(?::\d{2})?$/);
+  if (!m) return raw;
+  const hour24 = Number(m[4]);
+  const minute = m[5];
+  const ampm = hour24 >= 12 ? 'PM' : 'AM';
+  const hour12 = (hour24 % 12) || 12;
+  return `${hour12}:${minute} ${ampm} ET`;
+}
+
 function formatEtDateOnly(ymd) {
   const raw = String(ymd || '').trim();
   const m = raw.match(/^(\d{4})-(\d{2})-(\d{2})$/);
@@ -244,6 +256,14 @@ async function fetchReportPeriod(siteId, studyDate, period) {
   const res = await fetch(url);
   const json = await res.json();
   if (!json.ok) throw new Error(json.error || `Failed to load ${period} report data.`);
+  return json;
+}
+
+async function fetchRepeatCutThroughData(siteId, studyDate) {
+  const url = `api/repeat_cut_through_data.php?site_id=${encodeURIComponent(siteId)}&study_date=${encodeURIComponent(studyDate)}`;
+  const res = await fetch(url);
+  const json = await res.json();
+  if (!json.ok) throw new Error(json.error || 'Failed to load AM/PM repeat cut-through data.');
   return json;
 }
 
@@ -399,6 +419,34 @@ function summaryRowsForPeriod(data) {
   ];
 }
 
+function repeatSummaryRows(repeatData) {
+  const summary = repeatData?.summary || {};
+  const rows = [
+    ['Repeat Cut-Through Vehicles (AM & PM)', String(summary.repeat_vehicle_count ?? 0)],
+    ['Repeat Basis', 'Same 3-char plate + type + color'],
+  ];
+  const skippedCount = Number(summary.skipped_incomplete_match_count ?? 0);
+  if (skippedCount > 0) {
+    rows.push(['Skipped Repeat Candidates', String(skippedCount)]);
+  }
+  return rows;
+}
+
+function repeatDetailRows(repeatData) {
+  const rows = (repeatData?.rows || []).map((row) => [
+    String(row?.signature_label || '--'),
+    String(row?.am_count ?? 0),
+    Array.isArray(row?.am_routes) && row.am_routes.length ? row.am_routes.join('; ') : '--',
+    formatEtTimeOnly(row?.am_first_in_time || ''),
+    formatEtTimeOnly(row?.am_last_out_time || ''),
+    String(row?.pm_count ?? 0),
+    Array.isArray(row?.pm_routes) && row.pm_routes.length ? row.pm_routes.join('; ') : '--',
+    formatEtTimeOnly(row?.pm_first_in_time || ''),
+    formatEtTimeOnly(row?.pm_last_out_time || ''),
+  ]);
+  return rows.length ? rows : [['No repeat cut-through vehicles detected', '', '', '', '', '', '', '', '']];
+}
+
 function addAutoTable(pdf, config) {
   pdf.autoTable({
     theme: 'grid',
@@ -425,8 +473,11 @@ async function downloadPdfReport() {
   downloadStatus.className = 'status small';
   try {
     await ensurePdfLibraries();
-    const morningData = await fetchReportPeriod(siteId, studyDate, 'morning');
-    const afternoonData = await fetchReportPeriod(siteId, studyDate, 'afternoon');
+    const [morningData, afternoonData, repeatData] = await Promise.all([
+      fetchReportPeriod(siteId, studyDate, 'morning'),
+      fetchReportPeriod(siteId, studyDate, 'afternoon'),
+      fetchRepeatCutThroughData(siteId, studyDate),
+    ]);
 
     const { jsPDF } = window.jspdf;
     const pdf = new jsPDF({ unit: 'pt', format: 'letter' });
@@ -552,6 +603,43 @@ async function downloadPdfReport() {
 
     appendPeriod('Morning Study', morningData);
     appendPeriod('Afternoon Study', afternoonData);
+
+    if (y > pageHeight - 200) {
+      pdf.addPage();
+      y = 56;
+    }
+
+    pdf.setFont('helvetica', 'bold');
+    pdf.setFontSize(15);
+    pdf.text('AM + PM Repeat Cut-Through Summary', marginX, y);
+    y += 10;
+
+    addAutoTable(pdf, {
+      startY: y + 6,
+      head: [['Metric', 'Value']],
+      body: repeatSummaryRows(repeatData),
+      columnStyles: { 0: { cellWidth: 220 }, 1: { cellWidth: contentWidth - 220 } },
+    });
+    y = pdf.lastAutoTable.finalY + 12;
+
+    addAutoTable(pdf, {
+      startY: y,
+      head: [['Vehicle Signature', 'AM Count', 'AM Routes', 'AM First In', 'AM Last Out', 'PM Count', 'PM Routes', 'PM First In', 'PM Last Out']],
+      body: repeatDetailRows(repeatData),
+      styles: { fontSize: 7, cellPadding: 3, overflow: 'linebreak' },
+      columnStyles: {
+        0: { cellWidth: 74 },
+        1: { cellWidth: 28 },
+        2: { cellWidth: 90 },
+        3: { cellWidth: 48 },
+        4: { cellWidth: 48 },
+        5: { cellWidth: 28 },
+        6: { cellWidth: 90 },
+        7: { cellWidth: 48 },
+        8: { cellWidth: 48 },
+      },
+    });
+    y = pdf.lastAutoTable.finalY + 18;
 
     if (y > pageHeight - 120) {
       pdf.addPage();

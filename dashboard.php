@@ -124,6 +124,7 @@ let reportBusy = false;
 let seenRecentEventKeys = new Set();
 let hasRecentBaseline = false;
 const recentRowHighlightMs = 1200;
+let currentDashboardStudyDate = '';
 
 function currentStudyPeriod() {
   const hourEt = Number(new Intl.DateTimeFormat('en-US', {
@@ -140,6 +141,16 @@ function kpiCard(label, value, css='') {
 
 function kpiRow(title, cards) {
   return `<section style="margin-bottom:1rem;">
+    <div class="grid three">${cards.join('')}</div>
+  </section>`;
+}
+
+function kpiLabeledRow(title, cards, note = '') {
+  const safeTitle = escapeHtml(title || '');
+  const safeNote = escapeHtml(note || '');
+  return `<section style="margin-bottom:1rem;">
+    <div class="small" style="font-weight:700; letter-spacing:0.04em; text-transform:uppercase; margin-bottom:0.35rem;">${safeTitle}</div>
+    ${safeNote ? `<p class="small" style="margin-top:0; margin-bottom:0.5rem;">${safeNote}</p>` : ''}
     <div class="grid three">${cards.join('')}</div>
   </section>`;
 }
@@ -370,10 +381,27 @@ async function imageUrlToDataUri(url) {
   }
 }
 
-async function fetchReportPeriod(period) {
-  const res = await fetch(`api/dashboard_data.php?site_id=${activeSiteId}&study_period=${encodeURIComponent(period)}&include_all_events=1`);
+async function fetchReportPeriod(period, studyDate = currentDashboardStudyDate) {
+  const resolvedStudyDate = String(studyDate || '').trim();
+  const params = new URLSearchParams();
+  params.set('site_id', String(activeSiteId));
+  params.set('study_period', String(period));
+  params.set('include_all_events', '1');
+  if (resolvedStudyDate !== '') params.set('study_date', resolvedStudyDate);
+  const res = await fetch(`api/dashboard_data.php?${params.toString()}`);
   const json = await res.json();
   if (!json.ok) throw new Error(json.error || `Failed to load ${period} report data.`);
+  return json;
+}
+
+async function fetchRepeatCutThroughData(studyDate = currentDashboardStudyDate) {
+  const resolvedStudyDate = String(studyDate || '').trim();
+  const params = new URLSearchParams();
+  params.set('site_id', String(activeSiteId));
+  if (resolvedStudyDate !== '') params.set('study_date', resolvedStudyDate);
+  const res = await fetch(`api/repeat_cut_through_data.php?${params.toString()}`);
+  const json = await res.json();
+  if (!json.ok) throw new Error(json.error || 'Failed to load AM/PM repeat cut-through data.');
   return json;
 }
 
@@ -553,6 +581,34 @@ function summaryRowsForPeriod(data) {
   ];
 }
 
+function repeatSummaryRows(repeatData) {
+  const summary = repeatData?.summary || {};
+  const rows = [
+    ['Repeat Cut-Through Vehicles (AM & PM)', String(summary.repeat_vehicle_count ?? 0)],
+    ['Repeat Basis', 'Same 3-char plate + type + color'],
+  ];
+  const skippedCount = Number(summary.skipped_incomplete_match_count ?? 0);
+  if (skippedCount > 0) {
+    rows.push(['Skipped Repeat Candidates', String(skippedCount)]);
+  }
+  return rows;
+}
+
+function repeatDetailRows(repeatData) {
+  const rows = (repeatData?.rows || []).map((row) => [
+    String(row?.signature_label || '--'),
+    String(row?.am_count ?? 0),
+    Array.isArray(row?.am_routes) && row.am_routes.length ? row.am_routes.join('; ') : '--',
+    formatEtTimeOnly(row?.am_first_in_time || ''),
+    formatEtTimeOnly(row?.am_last_out_time || ''),
+    String(row?.pm_count ?? 0),
+    Array.isArray(row?.pm_routes) && row.pm_routes.length ? row.pm_routes.join('; ') : '--',
+    formatEtTimeOnly(row?.pm_first_in_time || ''),
+    formatEtTimeOnly(row?.pm_last_out_time || ''),
+  ]);
+  return rows.length ? rows : [['No repeat cut-through vehicles detected', '', '', '', '', '', '', '', '']];
+}
+
 function addAutoTable(pdf, config) {
   pdf.autoTable({
     theme: 'grid',
@@ -574,8 +630,12 @@ async function downloadFormalReportPdf() {
 
   try {
     await ensurePdfLibraries();
-    const morningData = await fetchReportPeriod('morning');
-    const afternoonData = await fetchReportPeriod('afternoon');
+    const reportStudyDate = String(currentDashboardStudyDate || '').trim();
+    const [morningData, afternoonData, repeatData] = await Promise.all([
+      fetchReportPeriod('morning', reportStudyDate),
+      fetchReportPeriod('afternoon', reportStudyDate),
+      fetchRepeatCutThroughData(reportStudyDate),
+    ]);
 
     const { jsPDF } = window.jspdf;
     const pdf = new jsPDF({ unit: 'pt', format: 'letter' });
@@ -703,6 +763,43 @@ async function downloadFormalReportPdf() {
     appendPeriod('Morning Study', morningData);
     appendPeriod('Afternoon Study', afternoonData);
 
+    if (y > pageHeight - 200) {
+      pdf.addPage();
+      y = 56;
+    }
+
+    pdf.setFont('helvetica', 'bold');
+    pdf.setFontSize(15);
+    pdf.text('AM + PM Repeat Cut-Through Summary', marginX, y);
+    y += 10;
+
+    addAutoTable(pdf, {
+      startY: y + 6,
+      head: [['Metric', 'Value']],
+      body: repeatSummaryRows(repeatData),
+      columnStyles: { 0: { cellWidth: 220 }, 1: { cellWidth: contentWidth - 220 } },
+    });
+    y = pdf.lastAutoTable.finalY + 12;
+
+    addAutoTable(pdf, {
+      startY: y,
+      head: [['Vehicle Signature', 'AM Count', 'AM Routes', 'AM First In', 'AM Last Out', 'PM Count', 'PM Routes', 'PM First In', 'PM Last Out']],
+      body: repeatDetailRows(repeatData),
+      styles: { fontSize: 7, cellPadding: 3, overflow: 'linebreak' },
+      columnStyles: {
+        0: { cellWidth: 74 },
+        1: { cellWidth: 28 },
+        2: { cellWidth: 90 },
+        3: { cellWidth: 48 },
+        4: { cellWidth: 48 },
+        5: { cellWidth: 28 },
+        6: { cellWidth: 90 },
+        7: { cellWidth: 48 },
+        8: { cellWidth: 48 },
+      },
+    });
+    y = pdf.lastAutoTable.finalY + 18;
+
     if (y > pageHeight - 120) {
       pdf.addPage();
       y = 56;
@@ -789,6 +886,7 @@ async function loadDashboard() {
 
   pollMs = Math.max(5000, Number(json.settings.poll_seconds || 10) * 1000);
   document.getElementById('pollLabel').textContent = String(pollMs / 1000);
+  currentDashboardStudyDate = String(json.study_date || '').trim();
 
   const summary = json.summary;
   const totalVolume = Number(summary.total_volume || 0);
@@ -823,6 +921,15 @@ async function loadDashboard() {
   )).toFixed(2);
   const pairCounts = pairCountsByRoute(json.matches || [], totalVolume);
   const topPair = pairCounts[0] || null;
+  let repeatData = null;
+  try {
+    repeatData = await fetchRepeatCutThroughData(currentDashboardStudyDate);
+  } catch (err) {
+    repeatData = null;
+  }
+  const repeatSummary = repeatData?.summary || {};
+  const repeatCountValue = repeatData ? String(repeatSummary.repeat_vehicle_count ?? 0) : '--';
+  const skippedRepeatCandidates = Number(repeatSummary.skipped_incomplete_match_count ?? 0);
   const pairChartSummary = document.getElementById('pairChartSummary');
   if (pairChartSummary) pairChartSummary.textContent = `Cut-Through by Checkpoint Pair (${pairCounts.length})`;
   const matchSummary = document.getElementById('matchSummary');
@@ -852,6 +959,12 @@ async function loadDashboard() {
   const policyCards = [
     kpiCard('Policy Status', policyStatus, policyClass),
   ];
+  const crossPeriodCards = [
+    kpiCard('Repeat Cut-Through Vehicles', repeatCountValue),
+  ];
+  const crossPeriodNote = repeatData
+    ? `Same 3-char plate + type + color in both AM and PM.${skippedRepeatCandidates > 0 ? ` ${skippedRepeatCandidates} incomplete candidate(s) skipped.` : ''}`
+    : 'AM + PM repeat metric unavailable.';
 
   document.getElementById('kpis').innerHTML = [
     kpiRow('Dates', dateCards),
@@ -859,6 +972,7 @@ async function loadDashboard() {
     kpiRow('Speeds', speedCards),
     kpiRow('Avg Match', avgMatchCards),
     kpiRow('Policy', policyCards),
+    kpiLabeledRow('AM + PM', crossPeriodCards, crossPeriodNote),
   ].join('');
   renderPairChart(json.matches || [], totalVolume);
 
