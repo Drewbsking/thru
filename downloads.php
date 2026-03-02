@@ -407,6 +407,8 @@ function summaryRowsForPeriod(data) {
     ['Highest Checkpoint Two-Way', String(highestCheckpointTwoWay)],
     ['Cut-Through Vehicles', String(cutThroughCount)],
     ['Cut-Through / Highest Two-Way', `${cutThroughCount}/${highestCheckpointTwoWay} (${cutThroughOverHighestPercent.toFixed(2)}%)`],
+    ['In/Out Same Checkpoint', String(summary.same_checkpoint_in_out_count ?? 0)],
+    ['In/Out Different, Outside Window', String(summary.different_checkpoint_outside_window_count ?? 0)],
     ['Vehicles Per Hour', `${vehiclesPerHour} veh/hr`],
     ['Avg Match Confidence', `${avgMatchConfidence}%`],
     ['Max Leg Policy %', `${maxLegPolicyPercent.toFixed(2)}% (${maxLegPolicyCount}/${maxLegPolicyDenominator}, ${maxLegPolicyRoute})`],
@@ -425,8 +427,6 @@ function repeatSummaryRows(repeatData) {
   const rows = [
     ['Repeat Cut-Through Vehicles (AM & PM)', String(summary.repeat_vehicle_count ?? 0)],
     ['Plate Prefixes 4x+ (All Data)', String(summary.all_data_plate_4x_count ?? 0)],
-    ['In/Out Same Checkpoint', String(summary.same_checkpoint_in_out_count ?? 0)],
-    ['In/Out Different, Outside Window', String(summary.different_checkpoint_outside_window_count ?? 0)],
     ['Repeat Basis', 'Cut-through matches only; best AM-to-PM plate/type/color confidence match (route ignored)'],
   ];
   if (repeatThreshold > 0) {

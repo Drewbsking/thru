@@ -127,6 +127,14 @@ if (!$studyDateProvided && count($events) === 0 && count($sessionComments) === 0
 
 $distanceMap = distance_map_for_site($siteId);
 $analysis = classify_events($events, $distanceMap, $speedMph, $bufferMinutes, $minConfidence);
+$nonCutThroughAnalysis = analyze_non_cut_through_in_out_pairs(
+    $analysis['unmatched_in'] ?? [],
+    $analysis['unmatched_out'] ?? [],
+    $distanceMap,
+    $speedMph,
+    $bufferMinutes,
+    $minConfidence
+);
 $avgMatchConfidence = 0.0;
 if (count($analysis['matches']) > 0) {
     $confidenceSum = 0.0;
@@ -278,6 +286,8 @@ json_response([
         'meets_policy' => $maxLegPolicyPercent >= $policyThreshold,
         'local_arrivals_count' => count($analysis['unmatched_in']),
         'local_departures_count' => count($analysis['unmatched_out']),
+        'same_checkpoint_in_out_count' => (int)($nonCutThroughAnalysis['same_checkpoint_count'] ?? 0),
+        'different_checkpoint_outside_window_count' => (int)($nonCutThroughAnalysis['different_checkpoint_outside_window_count'] ?? 0),
     ],
     'checkpoints' => $checkpointList,
     'checkpoint_counts' => $checkpointCounts,

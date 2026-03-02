@@ -569,6 +569,8 @@ function summaryRowsForPeriod(data) {
     ['Highest Checkpoint Two-Way', String(highestCheckpointTwoWay)],
     ['Cut-Through Vehicles', String(cutThroughCount)],
     ['Cut-Through / Highest Two-Way', `${cutThroughCount}/${highestCheckpointTwoWay} (${cutThroughOverHighestPercent.toFixed(2)}%)`],
+    ['In/Out Same Checkpoint', String(summary.same_checkpoint_in_out_count ?? 0)],
+    ['In/Out Different, Outside Window', String(summary.different_checkpoint_outside_window_count ?? 0)],
     ['Vehicles Per Hour', `${vehiclesPerHour} veh/hr`],
     ['Avg Match Confidence', `${avgMatchConfidence}%`],
     ['Max Leg Policy %', `${maxLegPolicyPercent.toFixed(2)}% (${maxLegPolicyCount}/${maxLegPolicyDenominator}, ${maxLegPolicyRoute})`],
@@ -587,8 +589,6 @@ function repeatSummaryRows(repeatData) {
   const rows = [
     ['Repeat Cut-Through Vehicles (AM & PM)', String(summary.repeat_vehicle_count ?? 0)],
     ['Plate Prefixes 4x+ (All Data)', String(summary.all_data_plate_4x_count ?? 0)],
-    ['In/Out Same Checkpoint', String(summary.same_checkpoint_in_out_count ?? 0)],
-    ['In/Out Different, Outside Window', String(summary.different_checkpoint_outside_window_count ?? 0)],
     ['Repeat Basis', 'Cut-through matches only; best AM-to-PM plate/type/color confidence match (route ignored)'],
   ];
   if (repeatThreshold > 0) {
@@ -956,6 +956,8 @@ async function loadDashboard() {
     kpiCard('Cut-Through / Highest Two-Way', `${cutThroughCount}/${highestCheckpointTwoWay} (${cutThroughOverHighestPercent.toFixed(2)}%)`),
     kpiCard('Local Arrivals (In only)', summary.local_arrivals_count),
     kpiCard('Local Departures (Out only)', summary.local_departures_count),
+    kpiCard('In/Out Same Checkpoint', summary.same_checkpoint_in_out_count),
+    kpiCard('In/Out Different, Outside Window', summary.different_checkpoint_outside_window_count),
   ];
   const speedCards = [
     kpiCard('Vehicles Per Hour', `${vehiclesPerHour} veh/hr`),
@@ -971,12 +973,10 @@ async function loadDashboard() {
   const crossPeriodCards = [
     kpiCard('Repeat Cut-Through Vehicles', repeatCountValue),
     kpiCard('Plate Prefixes 4x+ (All Data)', String(repeatSummary.all_data_plate_4x_count ?? 0)),
-    kpiCard('In/Out Same Checkpoint', String(repeatSummary.same_checkpoint_in_out_count ?? 0)),
-    kpiCard('In/Out Different, Outside Window', String(repeatSummary.different_checkpoint_outside_window_count ?? 0)),
   ];
   const repeatThreshold = Number(repeatData?.repeat_match_min_confidence ?? 0);
   const crossPeriodNote = repeatData
-    ? `AM+PM comparison cards use each study period pool after cut-through matches are removed. Same-checkpoint pairs never count as cut-throughs; different-checkpoint pairs here are outside the route timing window. Plate Prefixes 4x+ still counts normalized 3-char plates across all AM+PM events.${repeatThreshold > 0 ? ` Threshold ${repeatThreshold}%.` : ''}${skippedRepeatCandidates > 0 ? ` ${skippedRepeatCandidates} candidate(s) without a usable plate were skipped.` : ''}`
+    ? `Repeat KPI uses best cut-through-only AM-to-PM confidence matching. Plate Prefixes 4x+ counts normalized 3-char plates across all AM+PM events.${repeatThreshold > 0 ? ` Threshold ${repeatThreshold}%.` : ''}${skippedRepeatCandidates > 0 ? ` ${skippedRepeatCandidates} candidate(s) without a usable plate were skipped.` : ''}`
     : 'AM + PM repeat metric unavailable.';
 
   document.getElementById('kpis').innerHTML = [
