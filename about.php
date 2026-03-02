@@ -117,7 +117,7 @@ render_head('About');
       <tr><td>Top Leg % (dashboard KPI)</td><td>The highest leg % among all checkpoint pairs in the selected period.</td></tr>
       <tr><td>Cut-Through / Highest Two-Way</td><td><code class="inline">(cut_through_count / highest_checkpoint_two_way) * 100</code>. Dashboard shows both raw ratio and percent.</td></tr>
       <tr><td>Policy Status</td><td>Uses per-leg endpoint ratio. For each leg A→B: <code class="inline">leg_percent = leg_cut_through_count / max(two_way_at_A, two_way_at_B) * 100</code>. Policy checks the highest leg % against <?= h(number_format($policyThreshold, 0)) ?>%.</td></tr>
-      <tr><td>Repeat Cut-Through Vehicles (AM + PM)</td><td>Observed vehicle signatures that appear in matched cut-throughs in both AM and PM on the same study date, using the same 3-character plate prefix, vehicle type, and vehicle color. This is not a full-plate identity guarantee.</td></tr>
+      <tr><td>Repeat Cut-Through Vehicles (AM + PM)</td><td>Likely repeat cut-through vehicles found by comparing Morning and Afternoon matched cut-throughs on the same study date using the same plate/type/color confidence scoring as checkpoint matching. Route is ignored, matches are one-to-one, and this is not a full-plate identity guarantee because only the first 3 plate characters are stored.</td></tr>
     </tbody>
   </table>
 </section>

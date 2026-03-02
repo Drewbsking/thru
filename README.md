@@ -21,7 +21,7 @@
 - Dashboard includes `Cut-Through / Highest Two-Way`: `cut_through_count / highest_checkpoint_two_way`.
 - Policy status is based on the highest per-leg endpoint ratio (configurable threshold in setup):
   `leg_percent = leg_cut_through_count / max(two_way_at_leg_start, two_way_at_leg_end)`.
-- Dashboard/PDF can also report `Repeat Cut-Through Vehicles (AM + PM)`: matched cut-through vehicle signatures seen in both AM and PM on the same date using the same 3-character plate prefix, type, and color.
+- Dashboard/PDF can also report `Repeat Cut-Through Vehicles (AM + PM)`: likely repeat vehicles found by comparing Morning and Afternoon cut-through matches on the same date with the same plate/type/color confidence scoring used for checkpoint matching. Route is ignored, matching is one-to-one, and it is not a full-plate identity guarantee because only the first 3 plate characters are stored.
 - Dashboard and details filter by study period: `Morning Study` or `Afternoon Study` for the selected day.
 - Data collectors are assigned per checkpoint in Site Setup and auto-attached to event records in Data Entry.
 - Checkpoint codes are auto-numbered per site (`1`, `2`, `3`, ...); admins only set display names.

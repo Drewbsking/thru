@@ -37,15 +37,16 @@ $afternoonEvents = $loadEvents($siteId, $studyDate . ' 12:00:00', $studyDate . '
 $distanceMap = distance_map_for_site($siteId);
 $morningAnalysis = classify_events($morningEvents, $distanceMap, $speedMph, $bufferMinutes, $minConfidence);
 $afternoonAnalysis = classify_events($afternoonEvents, $distanceMap, $speedMph, $bufferMinutes, $minConfidence);
-$repeatAnalysis = analyze_repeat_cut_throughs($morningAnalysis['matches'] ?? [], $afternoonAnalysis['matches'] ?? []);
+$repeatAnalysis = analyze_repeat_cut_throughs($morningAnalysis['matches'] ?? [], $afternoonAnalysis['matches'] ?? [], $minConfidence);
 
 json_response([
     'ok' => true,
     'site_id' => $siteId,
     'requested_study_date' => $requestedStudyDate,
     'study_date' => $studyDate,
-    'identity_basis' => 'plate_prefix_type_color',
+    'identity_basis' => 'cut_through_confidence_plate_type_color',
     'route_rule' => 'any_route',
+    'repeat_match_min_confidence' => $minConfidence,
     'summary' => [
         'repeat_vehicle_count' => (int)($repeatAnalysis['repeat_vehicle_count'] ?? 0),
         'morning_unique_cut_through_vehicle_count' => (int)($repeatAnalysis['morning_unique_cut_through_vehicle_count'] ?? 0),

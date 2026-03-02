@@ -183,16 +183,25 @@ function match_first_non_empty_string(array $values): string
     return '';
 }
 
-function cut_through_signature_from_match(array $match): ?array
+function cut_through_vehicle_from_match(array $match): ?array
 {
     $inEvent = is_array($match['in_event'] ?? null) ? $match['in_event'] : [];
     $outEvent = is_array($match['out_event'] ?? null) ? $match['out_event'] : [];
 
-    $plateKey = normalize_plate(match_first_non_empty_string([
+    $plateNorm = normalize_plate(match_first_non_empty_string([
         $inEvent['plate_norm'] ?? '',
         $outEvent['plate_norm'] ?? '',
         $inEvent['plate_raw'] ?? '',
         $outEvent['plate_raw'] ?? '',
+    ]));
+    if ($plateNorm === '') {
+        return null;
+    }
+
+    $plateLabel = strtoupper(match_first_non_empty_string([
+        $inEvent['plate_raw'] ?? '',
+        $outEvent['plate_raw'] ?? '',
+        $plateNorm,
     ]));
     $vehicleTypeLabel = match_first_non_empty_string([
         $inEvent['vehicle_type'] ?? '',
@@ -202,12 +211,6 @@ function cut_through_signature_from_match(array $match): ?array
         $inEvent['vehicle_color'] ?? '',
         $outEvent['vehicle_color'] ?? '',
     ]);
-    $vehicleTypeKey = strtolower($vehicleTypeLabel);
-    $vehicleColorKey = strtolower($vehicleColorLabel);
-
-    if ($plateKey === '' || $vehicleTypeKey === '' || $vehicleColorKey === '') {
-        return null;
-    }
 
     $inCheckpointLabel = match_first_non_empty_string([
         $inEvent['checkpoint_name'] ?? '',
@@ -221,103 +224,110 @@ function cut_through_signature_from_match(array $match): ?array
     ]);
 
     return [
-        'signature_key' => $plateKey . '|' . $vehicleTypeKey . '|' . $vehicleColorKey,
-        'plate_key' => $plateKey,
-        'vehicle_type_key' => $vehicleTypeKey,
-        'vehicle_color_key' => $vehicleColorKey,
-        'signature_label' => $plateKey . ' / ' . $vehicleTypeLabel . ' / ' . $vehicleColorLabel,
+        'vehicle_key' => ((string)($match['in_id'] ?? $inEvent['id'] ?? 0)) . ':' . ((string)($match['out_id'] ?? $outEvent['id'] ?? 0)),
+        'vehicle_event' => [
+            'plate_norm' => $plateNorm,
+            'vehicle_type' => $vehicleTypeLabel,
+            'vehicle_color' => $vehicleColorLabel,
+        ],
+        'vehicle_label' => ($plateLabel !== '' ? $plateLabel : $plateNorm)
+            . ' / ' . ($vehicleTypeLabel !== '' ? $vehicleTypeLabel : '--')
+            . ' / ' . ($vehicleColorLabel !== '' ? $vehicleColorLabel : '--'),
         'route_label' => $inCheckpointLabel . ' to ' . $outCheckpointLabel,
         'in_time' => trim((string)($inEvent['event_time'] ?? '')),
         'out_time' => trim((string)($outEvent['event_time'] ?? '')),
     ];
 }
 
-function analyze_repeat_cut_throughs(array $morningMatches, array $afternoonMatches): array
+function analyze_repeat_cut_throughs(array $morningMatches, array $afternoonMatches, int $minConfidence): array
 {
     $skippedIncompleteMatchCount = 0;
-
-    $buildPeriodGroups = static function (array $matches, int &$skippedIncompleteMatchCount): array {
-        $groups = [];
+    $buildPeriodVehicles = static function (array $matches, string $period, int &$skippedIncompleteMatchCount): array {
+        $vehicles = [];
         foreach ($matches as $match) {
-            $signature = cut_through_signature_from_match($match);
-            if ($signature === null) {
+            $vehicle = cut_through_vehicle_from_match($match);
+            if ($vehicle === null) {
                 $skippedIncompleteMatchCount++;
                 continue;
             }
-
-            $signatureKey = (string)$signature['signature_key'];
-            if (!isset($groups[$signatureKey])) {
-                $groups[$signatureKey] = [
-                    'signature_key' => $signatureKey,
-                    'signature_label' => (string)$signature['signature_label'],
-                    'count' => 0,
-                    'route_set' => [],
-                    'first_in_time' => '',
-                    'last_out_time' => '',
-                ];
-            }
-
-            $groups[$signatureKey]['count']++;
-            $groups[$signatureKey]['route_set'][(string)$signature['route_label']] = true;
-
-            $inTime = (string)$signature['in_time'];
-            $outTime = (string)$signature['out_time'];
-            if ($inTime !== '' && ($groups[$signatureKey]['first_in_time'] === '' || strcmp($inTime, (string)$groups[$signatureKey]['first_in_time']) < 0)) {
-                $groups[$signatureKey]['first_in_time'] = $inTime;
-            }
-            if ($outTime !== '' && ($groups[$signatureKey]['last_out_time'] === '' || strcmp($outTime, (string)$groups[$signatureKey]['last_out_time']) > 0)) {
-                $groups[$signatureKey]['last_out_time'] = $outTime;
-            }
+            $vehicle['period'] = $period;
+            $vehicles[] = $vehicle;
         }
-
-        foreach ($groups as &$group) {
-            $routes = array_keys($group['route_set']);
-            usort($routes, static fn(string $a, string $b): int => strnatcasecmp($a, $b));
-            $group['routes'] = $routes;
-            unset($group['route_set']);
-        }
-        unset($group);
-
-        return $groups;
+        return $vehicles;
     };
 
-    $morningGroups = $buildPeriodGroups($morningMatches, $skippedIncompleteMatchCount);
-    $afternoonGroups = $buildPeriodGroups($afternoonMatches, $skippedIncompleteMatchCount);
+    $morningVehicles = $buildPeriodVehicles($morningMatches, 'am', $skippedIncompleteMatchCount);
+    $afternoonVehicles = $buildPeriodVehicles($afternoonMatches, 'pm', $skippedIncompleteMatchCount);
 
-    $repeatVehicleRows = [];
-    foreach ($morningGroups as $signatureKey => $morningGroup) {
-        if (!isset($afternoonGroups[$signatureKey])) {
-            continue;
+    $candidates = [];
+    foreach ($morningVehicles as $morningVehicle) {
+        foreach ($afternoonVehicles as $afternoonVehicle) {
+            $scoreParts = compute_match_components(
+                (array)($morningVehicle['vehicle_event'] ?? []),
+                (array)($afternoonVehicle['vehicle_event'] ?? [])
+            );
+            $candidates[] = [
+                'am_key' => (string)($morningVehicle['vehicle_key'] ?? ''),
+                'pm_key' => (string)($afternoonVehicle['vehicle_key'] ?? ''),
+                'am_vehicle_label' => (string)($morningVehicle['vehicle_label'] ?? '--'),
+                'pm_vehicle_label' => (string)($afternoonVehicle['vehicle_label'] ?? '--'),
+                'am_route_label' => (string)($morningVehicle['route_label'] ?? '--'),
+                'pm_route_label' => (string)($afternoonVehicle['route_label'] ?? '--'),
+                'am_in_time' => (string)($morningVehicle['in_time'] ?? ''),
+                'am_out_time' => (string)($morningVehicle['out_time'] ?? ''),
+                'pm_in_time' => (string)($afternoonVehicle['in_time'] ?? ''),
+                'pm_out_time' => (string)($afternoonVehicle['out_time'] ?? ''),
+                'confidence' => (int)($scoreParts['confidence'] ?? 0),
+                'plate_score' => (int)($scoreParts['plate_score'] ?? 0),
+                'type_score' => (int)($scoreParts['type_score'] ?? 0),
+                'color_score' => (int)($scoreParts['color_score'] ?? 0),
+            ];
         }
-
-        $afternoonGroup = $afternoonGroups[$signatureKey];
-        $repeatVehicleRows[] = [
-            'signature_key' => (string)$signatureKey,
-            'signature_label' => (string)$morningGroup['signature_label'],
-            'am_count' => (int)$morningGroup['count'],
-            'am_routes' => array_values($morningGroup['routes'] ?? []),
-            'am_first_in_time' => (string)($morningGroup['first_in_time'] ?? ''),
-            'am_last_out_time' => (string)($morningGroup['last_out_time'] ?? ''),
-            'pm_count' => (int)$afternoonGroup['count'],
-            'pm_routes' => array_values($afternoonGroup['routes'] ?? []),
-            'pm_first_in_time' => (string)($afternoonGroup['first_in_time'] ?? ''),
-            'pm_last_out_time' => (string)($afternoonGroup['last_out_time'] ?? ''),
-        ];
     }
 
-    usort($repeatVehicleRows, static function (array $a, array $b): int {
-        $aTotal = (int)($a['am_count'] ?? 0) + (int)($a['pm_count'] ?? 0);
-        $bTotal = (int)($b['am_count'] ?? 0) + (int)($b['pm_count'] ?? 0);
-        if ($aTotal !== $bTotal) {
-            return $bTotal <=> $aTotal;
+    usort($candidates, static function (array $a, array $b): int {
+        if ((int)$a['confidence'] !== (int)$b['confidence']) {
+            return (int)$b['confidence'] <=> (int)$a['confidence'];
         }
-        return strnatcasecmp((string)($a['signature_label'] ?? ''), (string)($b['signature_label'] ?? ''));
+        if ((int)$a['plate_score'] !== (int)$b['plate_score']) {
+            return (int)$b['plate_score'] <=> (int)$a['plate_score'];
+        }
+        $aSupport = (int)$a['type_score'] + (int)$a['color_score'];
+        $bSupport = (int)$b['type_score'] + (int)$b['color_score'];
+        if ($aSupport !== $bSupport) {
+            return $bSupport <=> $aSupport;
+        }
+        $labelCmp = strnatcasecmp((string)($a['am_vehicle_label'] ?? ''), (string)($b['am_vehicle_label'] ?? ''));
+        if ($labelCmp !== 0) {
+            return $labelCmp;
+        }
+        return strnatcasecmp((string)($a['pm_vehicle_label'] ?? ''), (string)($b['pm_vehicle_label'] ?? ''));
     });
+
+    $usedMorning = [];
+    $usedAfternoon = [];
+    $repeatVehicleRows = [];
+    foreach ($candidates as $candidate) {
+        if ((int)$candidate['confidence'] < $minConfidence) {
+            continue;
+        }
+        $amKey = (string)($candidate['am_key'] ?? '');
+        $pmKey = (string)($candidate['pm_key'] ?? '');
+        if ($amKey === '' || $pmKey === '' || isset($usedMorning[$amKey]) || isset($usedAfternoon[$pmKey])) {
+            continue;
+        }
+        $usedMorning[$amKey] = true;
+        $usedAfternoon[$pmKey] = true;
+        $candidate['score_detail'] = 'P:' . (int)$candidate['plate_score']
+            . ' T:' . (int)$candidate['type_score']
+            . ' C:' . (int)$candidate['color_score'];
+        $repeatVehicleRows[] = $candidate;
+    }
 
     return [
         'repeat_vehicle_count' => count($repeatVehicleRows),
-        'morning_unique_cut_through_vehicle_count' => count($morningGroups),
-        'afternoon_unique_cut_through_vehicle_count' => count($afternoonGroups),
+        'morning_unique_cut_through_vehicle_count' => count($morningVehicles),
+        'afternoon_unique_cut_through_vehicle_count' => count($afternoonVehicles),
         'repeat_vehicle_rows' => $repeatVehicleRows,
         'skipped_incomplete_match_count' => $skippedIncompleteMatchCount,
     ];

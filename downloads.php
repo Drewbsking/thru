@@ -421,30 +421,35 @@ function summaryRowsForPeriod(data) {
 
 function repeatSummaryRows(repeatData) {
   const summary = repeatData?.summary || {};
+  const repeatThreshold = Number(repeatData?.repeat_match_min_confidence ?? 0);
   const rows = [
     ['Repeat Cut-Through Vehicles (AM & PM)', String(summary.repeat_vehicle_count ?? 0)],
-    ['Repeat Basis', 'Same 3-char plate + type + color'],
+    ['Repeat Basis', 'Cut-through matches only; best AM-to-PM plate/type/color confidence match (route ignored)'],
   ];
+  if (repeatThreshold > 0) {
+    rows.push(['Repeat Match Threshold', `${repeatThreshold}%`]);
+  }
   const skippedCount = Number(summary.skipped_incomplete_match_count ?? 0);
   if (skippedCount > 0) {
-    rows.push(['Skipped Repeat Candidates', String(skippedCount)]);
+    rows.push(['Skipped Repeat Candidates (No Plate)', String(skippedCount)]);
   }
   return rows;
 }
 
 function repeatDetailRows(repeatData) {
   const rows = (repeatData?.rows || []).map((row) => [
-    String(row?.signature_label || '--'),
-    String(row?.am_count ?? 0),
-    Array.isArray(row?.am_routes) && row.am_routes.length ? row.am_routes.join('; ') : '--',
-    formatEtTimeOnly(row?.am_first_in_time || ''),
-    formatEtTimeOnly(row?.am_last_out_time || ''),
-    String(row?.pm_count ?? 0),
-    Array.isArray(row?.pm_routes) && row.pm_routes.length ? row.pm_routes.join('; ') : '--',
-    formatEtTimeOnly(row?.pm_first_in_time || ''),
-    formatEtTimeOnly(row?.pm_last_out_time || ''),
+    String(row?.am_vehicle_label || '--'),
+    String(row?.pm_vehicle_label || '--'),
+    `${Number(row?.confidence ?? 0)}%`,
+    String(row?.score_detail || '--'),
+    String(row?.am_route_label || '--'),
+    formatEtTimeOnly(row?.am_in_time || ''),
+    formatEtTimeOnly(row?.am_out_time || ''),
+    String(row?.pm_route_label || '--'),
+    formatEtTimeOnly(row?.pm_in_time || ''),
+    formatEtTimeOnly(row?.pm_out_time || ''),
   ]);
-  return rows.length ? rows : [['No repeat cut-through vehicles detected', '', '', '', '', '', '', '', '']];
+  return rows.length ? rows : [['No repeat cut-through vehicles detected', '', '', '', '', '', '', '', '', '']];
 }
 
 function addAutoTable(pdf, config) {
@@ -624,19 +629,20 @@ async function downloadPdfReport() {
 
     addAutoTable(pdf, {
       startY: y,
-      head: [['Vehicle Signature', 'AM Count', 'AM Routes', 'AM First In', 'AM Last Out', 'PM Count', 'PM Routes', 'PM First In', 'PM Last Out']],
+      head: [['AM Vehicle', 'PM Vehicle', 'Confidence', 'Score', 'AM Route', 'AM In', 'AM Out', 'PM Route', 'PM In', 'PM Out']],
       body: repeatDetailRows(repeatData),
       styles: { fontSize: 7, cellPadding: 3, overflow: 'linebreak' },
       columnStyles: {
-        0: { cellWidth: 74 },
-        1: { cellWidth: 28 },
-        2: { cellWidth: 90 },
-        3: { cellWidth: 48 },
-        4: { cellWidth: 48 },
-        5: { cellWidth: 28 },
-        6: { cellWidth: 90 },
-        7: { cellWidth: 48 },
-        8: { cellWidth: 48 },
+        0: { cellWidth: 69 },
+        1: { cellWidth: 69 },
+        2: { cellWidth: 36 },
+        3: { cellWidth: 36 },
+        4: { cellWidth: 70 },
+        5: { cellWidth: 40 },
+        6: { cellWidth: 40 },
+        7: { cellWidth: 70 },
+        8: { cellWidth: 40 },
+        9: { cellWidth: 40 },
       },
     });
     y = pdf.lastAutoTable.finalY + 18;
