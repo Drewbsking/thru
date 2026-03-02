@@ -117,8 +117,29 @@ render_head('About');
       <tr><td>Top Leg % (dashboard KPI)</td><td>The highest leg % among all checkpoint pairs in the selected period.</td></tr>
       <tr><td>Cut-Through / Highest Two-Way</td><td><code class="inline">(cut_through_count / highest_checkpoint_two_way) * 100</code>. Dashboard shows both raw ratio and percent.</td></tr>
       <tr><td>Policy Status</td><td>Uses per-leg endpoint ratio. For each leg A→B: <code class="inline">leg_percent = leg_cut_through_count / max(two_way_at_A, two_way_at_B) * 100</code>. Policy checks the highest leg % against <?= h(number_format($policyThreshold, 0)) ?>%.</td></tr>
-      <tr><td>Repeat Cut-Through Vehicles (AM + PM)</td><td>Likely repeat cut-through vehicles found by comparing Morning and Afternoon matched cut-throughs on the same study date using the same plate/type/color confidence scoring as checkpoint matching. Route is ignored, matches are one-to-one, and this is not a full-plate identity guarantee because only the first 3 plate characters are stored.</td></tr>
+      <tr><td>Repeat Cut-Through Vehicles (AM + PM)</td><td>Count of likely repeat vehicles that were first classified as cut-throughs in both Morning and Afternoon on the same study date, then paired AM-to-PM with the same plate/type/color confidence logic used by the normal matcher. This count is not doubled: one accepted AM-to-PM pair counts as one repeat vehicle.</td></tr>
     </tbody>
   </table>
+</section>
+
+<section class="card" style="margin-top:1rem;">
+  <h2>How Repeat Cut-Through Vehicles Are Calculated</h2>
+  <ol>
+    <li>The system loads the exact same study date for both the Morning Study and Afternoon Study.</li>
+    <li>Morning and Afternoon are each run through the normal cut-through matcher first. Only records that already qualify as cut-through matches remain eligible for the repeat metric.</li>
+    <li>Local arrivals, local departures, same-checkpoint pairs, and different-checkpoint pairs outside the timing window are not part of the repeat cut-through pool.</li>
+    <li>For each matched cut-through, the repeat logic builds a candidate vehicle using the normalized 3-character plate prefix plus the recorded vehicle type and vehicle color.</li>
+    <li>Every Morning cut-through candidate is compared against every Afternoon cut-through candidate using the same confidence model as checkpoint matching:
+      <code class="inline">plate 65% + type 20% + color 15%</code>.
+    </li>
+    <li>Route is ignored for this metric. A vehicle can be counted as a repeat even if the Morning route and Afternoon route are different.</li>
+    <li>Candidate AM-to-PM pairs are ranked by best score first. The matcher then assigns pairs one-to-one, so a single Morning cut-through cannot be used twice and a single Afternoon cut-through cannot be used twice.</li>
+    <li>An AM-to-PM pair is accepted only if its confidence score meets the current minimum confidence setting from setup.</li>
+    <li>Each accepted AM-to-PM pair counts as <strong>1</strong> Repeat Cut-Through Vehicle. It is not counted as 2 just because it appears once in Morning and once in Afternoon.</li>
+    <li>Example: if one vehicle cut through once in Morning and once in Afternoon, the repeat metric is <strong>1</strong>. Morning cut-through count is still <strong>1</strong> and Afternoon cut-through count is still <strong>1</strong>.</li>
+    <li>If a vehicle has multiple cut-throughs in one period, the current repeat logic still uses one-to-one pairing. That means one Morning cut-through can match at most one Afternoon cut-through for this metric.</li>
+    <li>If a matched cut-through does not have a usable normalized plate prefix, it is excluded from repeat analysis and reported as a skipped repeat candidate.</li>
+    <li>This is still a likely-repeat metric, not a full vehicle identity guarantee, because the system stores only the first 3 plate characters.</li>
+  </ol>
 </section>
 <?php render_foot(); ?>
