@@ -34,10 +34,26 @@ $loadEvents = static function (int $siteId, string $from, string $to): array {
 
 $morningEvents = $loadEvents($siteId, $studyDate . ' 00:00:00', $studyDate . ' 11:59:59');
 $afternoonEvents = $loadEvents($siteId, $studyDate . ' 12:00:00', $studyDate . ' 23:59:59');
+$allEvents = array_merge($morningEvents, $afternoonEvents);
 $distanceMap = distance_map_for_site($siteId);
 $morningAnalysis = classify_events($morningEvents, $distanceMap, $speedMph, $bufferMinutes, $minConfidence);
 $afternoonAnalysis = classify_events($afternoonEvents, $distanceMap, $speedMph, $bufferMinutes, $minConfidence);
 $repeatAnalysis = analyze_repeat_cut_throughs($morningAnalysis['matches'] ?? [], $afternoonAnalysis['matches'] ?? [], $minConfidence);
+
+$plateCounts = [];
+foreach ($allEvents as $event) {
+    $plateNorm = normalize_plate((string)($event['plate_norm'] ?? $event['plate_raw'] ?? ''));
+    if ($plateNorm === '') {
+        continue;
+    }
+    $plateCounts[$plateNorm] = ($plateCounts[$plateNorm] ?? 0) + 1;
+}
+$allDataPlate4xCount = 0;
+foreach ($plateCounts as $count) {
+    if ((int)$count >= 4) {
+        $allDataPlate4xCount++;
+    }
+}
 
 json_response([
     'ok' => true,
@@ -52,6 +68,7 @@ json_response([
         'morning_unique_cut_through_vehicle_count' => (int)($repeatAnalysis['morning_unique_cut_through_vehicle_count'] ?? 0),
         'afternoon_unique_cut_through_vehicle_count' => (int)($repeatAnalysis['afternoon_unique_cut_through_vehicle_count'] ?? 0),
         'skipped_incomplete_match_count' => (int)($repeatAnalysis['skipped_incomplete_match_count'] ?? 0),
+        'all_data_plate_4x_count' => $allDataPlate4xCount,
     ],
     'rows' => array_values($repeatAnalysis['repeat_vehicle_rows'] ?? []),
 ]);

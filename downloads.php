@@ -424,6 +424,7 @@ function repeatSummaryRows(repeatData) {
   const repeatThreshold = Number(repeatData?.repeat_match_min_confidence ?? 0);
   const rows = [
     ['Repeat Cut-Through Vehicles (AM & PM)', String(summary.repeat_vehicle_count ?? 0)],
+    ['Plate Prefixes 4x+ (All Data)', String(summary.all_data_plate_4x_count ?? 0)],
     ['Repeat Basis', 'Cut-through matches only; best AM-to-PM plate/type/color confidence match (route ignored)'],
   ];
   if (repeatThreshold > 0) {
