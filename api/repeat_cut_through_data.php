@@ -41,6 +41,11 @@ $afternoonAnalysis = classify_events($afternoonEvents, $distanceMap, $speedMph, 
 $repeatAnalysis = analyze_repeat_cut_throughs($morningAnalysis['matches'] ?? [], $afternoonAnalysis['matches'] ?? [], $minConfidence);
 $morningNonCutThrough = analyze_non_cut_through_in_out_pairs($morningAnalysis['unmatched_in'] ?? [], $morningAnalysis['unmatched_out'] ?? [], $distanceMap, $speedMph, $bufferMinutes, $minConfidence);
 $afternoonNonCutThrough = analyze_non_cut_through_in_out_pairs($afternoonAnalysis['unmatched_in'] ?? [], $afternoonAnalysis['unmatched_out'] ?? [], $distanceMap, $speedMph, $bufferMinutes, $minConfidence);
+$repeatVehicleCount = (int)($repeatAnalysis['repeat_vehicle_count'] ?? 0);
+$morningCutThroughCount = (int)($repeatAnalysis['morning_unique_cut_through_vehicle_count'] ?? 0);
+$afternoonCutThroughCount = (int)($repeatAnalysis['afternoon_unique_cut_through_vehicle_count'] ?? 0);
+$morningRepeatPercent = $morningCutThroughCount > 0 ? round(($repeatVehicleCount / $morningCutThroughCount) * 100, 2) : 0.0;
+$afternoonRepeatPercent = $afternoonCutThroughCount > 0 ? round(($repeatVehicleCount / $afternoonCutThroughCount) * 100, 2) : 0.0;
 
 $plateCounts = [];
 foreach ($allEvents as $event) {
@@ -66,9 +71,11 @@ json_response([
     'route_rule' => 'any_route',
     'repeat_match_min_confidence' => $minConfidence,
     'summary' => [
-        'repeat_vehicle_count' => (int)($repeatAnalysis['repeat_vehicle_count'] ?? 0),
-        'morning_unique_cut_through_vehicle_count' => (int)($repeatAnalysis['morning_unique_cut_through_vehicle_count'] ?? 0),
-        'afternoon_unique_cut_through_vehicle_count' => (int)($repeatAnalysis['afternoon_unique_cut_through_vehicle_count'] ?? 0),
+        'repeat_vehicle_count' => $repeatVehicleCount,
+        'morning_unique_cut_through_vehicle_count' => $morningCutThroughCount,
+        'afternoon_unique_cut_through_vehicle_count' => $afternoonCutThroughCount,
+        'morning_repeat_percent_of_cut_through' => $morningRepeatPercent,
+        'afternoon_repeat_percent_of_cut_through' => $afternoonRepeatPercent,
         'skipped_incomplete_match_count' => (int)($repeatAnalysis['skipped_incomplete_match_count'] ?? 0),
         'all_data_plate_4x_count' => $allDataPlate4xCount,
         'same_checkpoint_in_out_count' => (int)($morningNonCutThrough['same_checkpoint_count'] ?? 0) + (int)($afternoonNonCutThrough['same_checkpoint_count'] ?? 0),

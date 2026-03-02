@@ -424,8 +424,15 @@ function summaryRowsForPeriod(data) {
 function repeatSummaryRows(repeatData) {
   const summary = repeatData?.summary || {};
   const repeatThreshold = Number(repeatData?.repeat_match_min_confidence ?? 0);
+  const repeatCount = Number(summary.repeat_vehicle_count ?? 0);
+  const morningCutThroughCount = Number(summary.morning_unique_cut_through_vehicle_count ?? 0);
+  const afternoonCutThroughCount = Number(summary.afternoon_unique_cut_through_vehicle_count ?? 0);
+  const morningRepeatPercent = Number(summary.morning_repeat_percent_of_cut_through ?? 0);
+  const afternoonRepeatPercent = Number(summary.afternoon_repeat_percent_of_cut_through ?? 0);
   const rows = [
-    ['Repeat Cut-Through Vehicles (AM & PM)', String(summary.repeat_vehicle_count ?? 0)],
+    ['Repeat Cut-Through Vehicles (AM & PM)', String(repeatCount)],
+    ['Repeat Share of Morning Cut-Throughs', `${repeatCount}/${morningCutThroughCount} (${morningRepeatPercent.toFixed(2)}%)`],
+    ['Repeat Share of Afternoon Cut-Throughs', `${repeatCount}/${afternoonCutThroughCount} (${afternoonRepeatPercent.toFixed(2)}%)`],
     ['Plate Prefixes 4x+ (All Data)', String(summary.all_data_plate_4x_count ?? 0)],
     ['Repeat Basis', 'Cut-through matches only; best AM-to-PM plate/type/color confidence match (route ignored)'],
   ];

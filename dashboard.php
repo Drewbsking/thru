@@ -135,8 +135,11 @@ function currentStudyPeriod() {
   return hourEt < 12 ? 'morning' : 'afternoon';
 }
 
-function kpiCard(label, value, css='') {
-  return `<article class="card"><div class="kpi ${css}">${value}</div><div class="kpi-label">${label}</div></article>`;
+function kpiCard(label, value, css='', detail='') {
+  const safeLabel = escapeHtml(label || '');
+  const safeValue = escapeHtml(value || '');
+  const safeDetail = escapeHtml(detail || '');
+  return `<article class="card"><div class="kpi ${css}">${safeValue}</div>${safeDetail ? `<div class="small" style="margin-top:0.25rem;">${safeDetail}</div>` : ''}<div class="kpi-label">${safeLabel}</div></article>`;
 }
 
 function kpiRow(title, cards) {
@@ -586,8 +589,15 @@ function summaryRowsForPeriod(data) {
 function repeatSummaryRows(repeatData) {
   const summary = repeatData?.summary || {};
   const repeatThreshold = Number(repeatData?.repeat_match_min_confidence ?? 0);
+  const repeatCount = Number(summary.repeat_vehicle_count ?? 0);
+  const morningCutThroughCount = Number(summary.morning_unique_cut_through_vehicle_count ?? 0);
+  const afternoonCutThroughCount = Number(summary.afternoon_unique_cut_through_vehicle_count ?? 0);
+  const morningRepeatPercent = Number(summary.morning_repeat_percent_of_cut_through ?? 0);
+  const afternoonRepeatPercent = Number(summary.afternoon_repeat_percent_of_cut_through ?? 0);
   const rows = [
-    ['Repeat Cut-Through Vehicles (AM & PM)', String(summary.repeat_vehicle_count ?? 0)],
+    ['Repeat Cut-Through Vehicles (AM & PM)', String(repeatCount)],
+    ['Repeat Share of Morning Cut-Throughs', `${repeatCount}/${morningCutThroughCount} (${morningRepeatPercent.toFixed(2)}%)`],
+    ['Repeat Share of Afternoon Cut-Throughs', `${repeatCount}/${afternoonCutThroughCount} (${afternoonRepeatPercent.toFixed(2)}%)`],
     ['Plate Prefixes 4x+ (All Data)', String(summary.all_data_plate_4x_count ?? 0)],
     ['Repeat Basis', 'Cut-through matches only; best AM-to-PM plate/type/color confidence match (route ignored)'],
   ];
@@ -938,6 +948,8 @@ async function loadDashboard() {
   }
   const repeatSummary = repeatData?.summary || {};
   const repeatCountValue = repeatData ? String(repeatSummary.repeat_vehicle_count ?? 0) : '--';
+  const morningRepeatPercent = Number(repeatSummary.morning_repeat_percent_of_cut_through ?? 0);
+  const afternoonRepeatPercent = Number(repeatSummary.afternoon_repeat_percent_of_cut_through ?? 0);
   const skippedRepeatCandidates = Number(repeatSummary.skipped_incomplete_match_count ?? 0);
   const pairChartSummary = document.getElementById('pairChartSummary');
   if (pairChartSummary) pairChartSummary.textContent = `Cut-Through by Checkpoint Pair (${pairCounts.length})`;
@@ -971,12 +983,12 @@ async function loadDashboard() {
     kpiCard('Policy Status', policyStatus, policyClass),
   ];
   const crossPeriodCards = [
-    kpiCard('Repeat Cut-Through Vehicles', repeatCountValue),
+    kpiCard('Repeat Cut-Through Vehicles', repeatCountValue, '', `AM ${morningRepeatPercent.toFixed(2)}% | PM ${afternoonRepeatPercent.toFixed(2)}%`),
     kpiCard('Plate Prefixes 4x+ (All Data)', String(repeatSummary.all_data_plate_4x_count ?? 0)),
   ];
   const repeatThreshold = Number(repeatData?.repeat_match_min_confidence ?? 0);
   const crossPeriodNote = repeatData
-    ? `Repeat KPI uses best cut-through-only AM-to-PM confidence matching. Plate Prefixes 4x+ counts normalized 3-char plates across all AM+PM events.${repeatThreshold > 0 ? ` Threshold ${repeatThreshold}%.` : ''}${skippedRepeatCandidates > 0 ? ` ${skippedRepeatCandidates} candidate(s) without a usable plate were skipped.` : ''}`
+    ? `Repeat KPI percentages show repeat count as a share of Morning cut-throughs and Afternoon cut-throughs for the same date. Plate Prefixes 4x+ counts normalized 3-char plates across all AM+PM events.${repeatThreshold > 0 ? ` Threshold ${repeatThreshold}%.` : ''}${skippedRepeatCandidates > 0 ? ` ${skippedRepeatCandidates} candidate(s) without a usable plate were skipped.` : ''}`
     : 'AM + PM repeat metric unavailable.';
 
   document.getElementById('kpis').innerHTML = [
